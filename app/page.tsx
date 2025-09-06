@@ -1,7 +1,6 @@
 "use client";
 
 import type React from "react";
-// --- MUSIC: Import useRef ---
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,10 +40,180 @@ import {
   TrendingUp,
   Edit,
   Wand2,
+  CheckCircle2, // Added for info card
+  AlertTriangle, // Added for info card
+  Lightbulb, // Added for info card
 } from "lucide-react";
 
+// --- 1. CONSOLIDATED DATA AND NEW COMPONENT ---
+
+// New interface for our detailed class data
+interface ClassInfo {
+  name: string;
+  beginnerFriendly: boolean;
+  strengths: string[];
+  weaknesses: string[];
+  tip: string;
+  baseStats: {
+    strength: number;
+    agility: number;
+    mana: number;
+    dexterity: number;
+    wisdom: number;
+    health: number;
+  };
+}
+
+// New single source of truth for all class data (replaces CLASS_TEMPLATES)
+const classData: Record<string, ClassInfo> = {
+  Barbarian: {
+    name: "Barbarian",
+    beginnerFriendly: true,
+    strengths: [
+      "Massive health pool",
+      "High physical damage",
+      "Simple to play",
+    ],
+    weaknesses: [
+      "No magical ability",
+      "Vulnerable to ranged magic",
+      "Lacks utility",
+    ],
+    tip: "Get in close and hit things hard. You're the party's tank.",
+    baseStats: {
+      strength: 25,
+      agility: 10,
+      mana: 5,
+      dexterity: 10,
+      wisdom: 5,
+      health: 25,
+    },
+  },
+  Mage: {
+    name: "Mage",
+    beginnerFriendly: true,
+    strengths: ["High-impact spells", "Excellent mana pool", "Ranged control"],
+    weaknesses: [
+      "Low health (fragile)",
+      "Weak in close combat",
+      "Reliant on mana",
+    ],
+    tip: "Stay at a distance and use your spells to control the battlefield.",
+    baseStats: {
+      strength: 5,
+      agility: 10,
+      mana: 25,
+      dexterity: 10,
+      wisdom: 25,
+      health: 5,
+    },
+  },
+  Rogue: {
+    name: "Rogue",
+    beginnerFriendly: false,
+    strengths: [
+      "High single-target damage",
+      "Excels at stealth & skills",
+      "High evasion",
+    ],
+    weaknesses: [
+      "Low health",
+      "Can be complex",
+      "Less effective in open combat",
+    ],
+    tip: "Use stealth and surprise attacks. Focus on disabling traps and picking locks.",
+    baseStats: {
+      strength: 10,
+      agility: 25,
+      mana: 5,
+      dexterity: 25,
+      wisdom: 10,
+      health: 5,
+    },
+  },
+  Bandit: {
+    name: "Bandit",
+    beginnerFriendly: false,
+    strengths: [
+      "High speed & evasion",
+      "Good critical hit chance",
+      "Versatile",
+    ],
+    weaknesses: [
+      "Moderate health",
+      "Weaker defenses",
+      "Lower sustained damage",
+    ],
+    tip: "Focus on flanking enemies and striking when they are vulnerable.",
+    baseStats: {
+      strength: 15,
+      agility: 20,
+      mana: 5,
+      dexterity: 20,
+      wisdom: 5,
+      health: 15,
+    },
+  },
+};
+
+// New ClassInfoCard component defined directly in this file
+function ClassInfoCard({ info }: { info: ClassInfo }) {
+  return (
+    <div className="p-4 border-2 border-accent rounded-lg bg-card/80 w-full md:w-72 shadow-lg animate-in fade-in duration-500">
+      <h3 className="font-fantasy text-xl font-bold text-primary glow-text">
+        {info.name}
+      </h3>
+      <div className="mt-2 flex items-center gap-2">
+        <span className="font-semibold text-sm">Difficulty:</span>
+        {info.beginnerFriendly ? (
+          <span className="flex items-center gap-1 text-green-500 font-bold text-sm">
+            <CheckCircle2 className="h-4 w-4" /> Beginner Friendly
+          </span>
+        ) : (
+          <span className="flex items-center gap-1 text-yellow-500 font-bold text-sm">
+            <AlertTriangle className="h-4 w-4" /> Intermediate
+          </span>
+        )}
+      </div>
+      <div className="mt-3">
+        <p className="font-semibold text-sm text-primary">Strengths:</p>
+        <ul className="list-disc list-inside space-y-1 text-xs text-card-foreground pl-2">
+          {info.strengths.map((strength) => (
+            <li key={strength}>{strength}</li>
+          ))}
+        </ul>
+      </div>
+      <div className="mt-3">
+        <p className="font-semibold text-sm text-destructive">Weaknesses:</p>
+        <ul className="list-disc list-inside space-y-1 text-xs text-card-foreground pl-2">
+          {info.weaknesses.map((weakness) => (
+            <li key={weakness}>{weakness}</li>
+          ))}
+        </ul>
+      </div>
+      <div className="mt-4 p-3 bg-secondary/10 border border-secondary/50 rounded-lg">
+        <p className="text-xs italic text-secondary-foreground">
+          <span className="font-bold flex items-center gap-1">
+            <Lightbulb className="h-3 w-3" />
+            Tip:
+          </span>{" "}
+          {info.tip}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // --- CLIENT-SIDE INTERFACES ---
-type CharacterClass = "Mage" | "Barbarian" | "Rogue" | "Bandit";
+type CharacterClass = keyof typeof classData;
+
+// FIXED: Corrected file extensions to match your screenshot
+const classPortraits: Record<CharacterClass, string> = {
+  Mage: "/portraits/mage.png",
+  Barbarian: "/portraits/barbarian.jpg",
+  Rogue: "/portraits/rogue.jpg",
+  Bandit: "/portraits/bandit.jpg",
+};
 
 interface Character {
   id: string;
@@ -74,47 +243,10 @@ interface GameEvent {
   difficulty: "Easy" | "Medium" | "Hard";
 }
 
-const CLASS_TEMPLATES: Record<
-  CharacterClass,
-  Omit<Character, "id" | "name" | "class">
-> = {
-  Barbarian: {
-    strength: 25,
-    agility: 10,
-    mana: 5,
-    dexterity: 10,
-    wisdom: 5,
-    health: 25,
-  },
-  Mage: {
-    strength: 5,
-    agility: 10,
-    mana: 25,
-    dexterity: 10,
-    wisdom: 25,
-    health: 5,
-  },
-  Rogue: {
-    strength: 10,
-    agility: 25,
-    mana: 5,
-    dexterity: 25,
-    wisdom: 10,
-    health: 5,
-  },
-  Bandit: {
-    strength: 15,
-    agility: 20,
-    mana: 5,
-    dexterity: 20,
-    wisdom: 5,
-    health: 15,
-  },
-};
-
 const getDifficultyColor = (
   difficulty: "Easy" | "Medium" | "Hard" | string
 ) => {
+  // ... (rest of the file is the same until PartySection)
   switch (difficulty) {
     case "Easy":
       return "text-green-500";
@@ -138,13 +270,10 @@ const D20Icon = (props: React.SVGProps<SVGSVGElement>) => (
     strokeLinejoin="round"
     {...props}
   >
-    <path d="M12 2L2 8.5V15.5L12 22L22 15.5V8.5L12 2Z" />
-    <path d="M2 8.5L12 12L22 8.5" />
-    <path d="M12 2V12" />
-    <path d="M2 15.5L7 13.75" />
-    <path d="M22 15.5L17 13.75" />
-    <path d="M12 22L7 19.25" />
-    <path d="M12 22L17 19.25" />
+    <path d="M12 2L2 8.5V15.5L12 22L22 15.5V8.5L12 2Z" />{" "}
+    <path d="M2 8.5L12 12L22 8.5" /> <path d="M12 2V12" />{" "}
+    <path d="M2 15.5L7 13.75" /> <path d="M22 15.5L17 13.75" />{" "}
+    <path d="M12 22L7 19.25" /> <path d="M12 22L17 19.25" />
   </svg>
 );
 
@@ -157,20 +286,14 @@ export default function HomePage() {
   >("home");
   const [party, setParty] = useState<Party | null>(null);
   const [isRevealing, setIsRevealing] = useState(false);
-
-  // --- MUSIC: Create a ref for the audio element ---
   const audioRef = useRef<HTMLAudioElement>(null);
-
   const rollDice = () => {
     if (isSpinning || isRevealing) return;
-
     setIsSpinning(true);
     setDiceValue(null);
-
     setTimeout(() => {
       setIsSpinning(false);
       setIsRevealing(true);
-
       setTimeout(() => {
         const roll = Math.floor(Math.random() * 20) + 1;
         setDiceValue(roll);
@@ -178,8 +301,6 @@ export default function HomePage() {
       }, 1500);
     }, 2000);
   };
-
-  // --- MUSIC: Update the toggleMusic function to control playback ---
   const toggleMusic = () => {
     const newMusicPlaying = !musicPlaying;
     setMusicPlaying(newMusicPlaying);
@@ -191,7 +312,6 @@ export default function HomePage() {
       }
     }
   };
-
   if (currentSection === "party") {
     return (
       <PartySection
@@ -206,12 +326,9 @@ export default function HomePage() {
       <EventsSection onBack={() => setCurrentSection("home")} party={party} />
     );
   }
-
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* --- MUSIC: Add the audio element here --- */}
       <audio ref={audioRef} src="/music/fantasy-theme.mp3" loop />
-
       <div className="absolute inset-0 opacity-10 bg-[url('/medieval-parchment-texture-with-faint-castle-illus.jpg')] bg-cover bg-center" />
       <Button
         onClick={toggleMusic}
@@ -230,8 +347,7 @@ export default function HomePage() {
             className="fixed bottom-6 right-6 z-50 bg-accent hover:bg-accent/80 text-accent-foreground rounded-full p-2"
             size="sm"
           >
-            <HelpCircle className="h-4 w-4 mr-1" />
-            Learn D&D
+            <HelpCircle className="h-4 w-4 mr-1" /> Learn D&D
           </Button>
         </DialogTrigger>
         <DialogContent className="max-w-2xl bg-card border-2 border-border">
@@ -240,7 +356,6 @@ export default function HomePage() {
               Dungeons & Dragons Guide
             </DialogTitle>
           </DialogHeader>
-
           <div className="space-y-4 text-card-foreground leading-relaxed max-h-[70vh] overflow-y-auto pr-6">
             <p>
               Dungeons & Dragons (D&D) is a tabletop role-playing game where
@@ -248,7 +363,6 @@ export default function HomePage() {
               Dungeon Master (DM). It's a game of imagination, strategy, and
               collaborative storytelling.
             </p>
-
             <div>
               <h3 className="font-fantasy text-lg text-primary mb-2">
                 Core Concepts
@@ -272,7 +386,6 @@ export default function HomePage() {
                 </li>
               </ul>
             </div>
-
             <div>
               <h3 className="font-fantasy text-lg text-primary mb-2">
                 How It Works
@@ -284,7 +397,6 @@ export default function HomePage() {
                 and excitement to every decision.
               </p>
             </div>
-
             <div>
               <h3 className="font-fantasy text-lg text-primary mb-2">
                 Why Use an Optimizer?
@@ -310,14 +422,14 @@ export default function HomePage() {
           >
             {isSpinning ? (
               <div className="flex items-center gap-3 text-secondary-foreground">
-                <D20Icon className="h-6 w-6 animate-spin text-primary" />
+                <D20Icon className="h-6 w-6 animate-spin text-primary" />{" "}
                 <span className="font-semibold text-lg">
                   Deciding your fate...
                 </span>
               </div>
             ) : isRevealing ? (
               <>
-                <Wand2 className="h-8 w-8 text-primary absolute animate-sweep" />
+                <Wand2 className="h-8 w-8 text-primary absolute animate-sweep" />{" "}
                 <span className="font-semibold text-lg text-secondary-foreground/50">
                   Revealing...
                 </span>
@@ -328,7 +440,7 @@ export default function HomePage() {
               </p>
             ) : (
               <div className="flex items-center gap-3 text-secondary-foreground">
-                <D20Icon className="h-6 w-6" />
+                <D20Icon className="h-6 w-6" />{" "}
                 <span className="font-semibold text-lg">
                   Click to discover your fate
                 </span>
@@ -355,7 +467,7 @@ export default function HomePage() {
   );
 }
 
-// ... (PartySection and EventsSection components remain the same) ...
+// --- 2. UPDATED PartySection COMPONENT ---
 function PartySection({
   onBack,
   party,
@@ -372,13 +484,14 @@ function PartySection({
   );
   const [isCreating, setIsCreating] = useState(!party);
 
+  // Updated to use the new `classData` object
   const createNewCharacter = (
     charClass: CharacterClass = "Mage"
   ): Character => ({
     id: Math.random().toString(36).substr(2, 9),
     name: "",
     class: charClass,
-    ...CLASS_TEMPLATES[charClass],
+    ...classData[charClass].baseStats,
   });
 
   const handleMemberCountChange = (count: number) => {
@@ -400,6 +513,7 @@ function PartySection({
     setCharacters(updated);
   };
 
+  // Updated to use the new `classData` object
   const handleCharacterClassChange = (
     index: number,
     newClass: CharacterClass
@@ -408,7 +522,7 @@ function PartySection({
     updated[index] = {
       ...updated[index],
       class: newClass,
-      ...CLASS_TEMPLATES[newClass],
+      ...classData[newClass].baseStats,
     };
     setCharacters(updated);
   };
@@ -429,12 +543,10 @@ function PartySection({
       alert("Please enter a name for your party.");
       return;
     }
-
     if (characters.length === 0) {
       alert("A party must have at least one member.");
       return;
     }
-
     for (const char of characters) {
       if (!char.name.trim()) {
         alert("Please make sure every character has a name.");
@@ -451,7 +563,6 @@ function PartySection({
         return;
       }
     }
-
     setParty({ name: partyName, members: characters });
     setIsCreating(false);
   };
@@ -482,13 +593,14 @@ function PartySection({
             ← Back to Home
           </Button>
         </div>
-
         {isCreating ? (
           <>
             <h1 className="font-fantasy text-4xl md:text-6xl text-primary mb-8 text-center glow-text">
               {party ? "Edit Your Party" : "Create Your Party"}
             </h1>
-            <div className="max-w-4xl mx-auto space-y-8">
+            <div className="max-w-7xl mx-auto space-y-8">
+              {" "}
+              {/* Increased max-width for new layout */}
               <Card className="bg-card/90 backdrop-blur border-2 border-accent shadow-xl">
                 <CardHeader>
                   <CardTitle className="font-fantasy text-xl text-primary">
@@ -529,136 +641,164 @@ function PartySection({
                   </div>
                 </CardContent>
               </Card>
-
-              {characters.map((character, index) => (
-                <Card
-                  key={character.id}
-                  className="bg-card/90 backdrop-blur border-2 border-primary shadow-xl"
-                >
-                  <CardHeader>
-                    <CardTitle className="font-fantasy text-xl text-primary">
-                      Character {index + 1}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label className="font-semibold">Name</Label>
-                        <Input
-                          value={character.name}
-                          onChange={(e) =>
-                            updateCharacterStat(index, "name", e.target.value)
-                          }
-                          placeholder="Character name..."
-                        />
-                      </div>
-                      <div>
-                        <Label className="font-semibold">Class</Label>
-                        <Select
-                          value={character.class}
-                          onValueChange={(value) =>
-                            handleCharacterClassChange(
-                              index,
-                              value as CharacterClass
-                            )
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Barbarian">Barbarian</SelectItem>
-                            <SelectItem value="Mage">Mage</SelectItem>
-                            <SelectItem value="Rogue">Rogue</SelectItem>
-                            <SelectItem value="Bandit">Bandit</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {[
-                        {
-                          key: "strength",
-                          label: "Strength",
-                          icon: <Sword className="h-4 w-4" />,
-                        },
-                        {
-                          key: "agility",
-                          label: "Agility",
-                          icon: <Eye className="h-4 w-4" />,
-                        },
-                        {
-                          key: "mana",
-                          label: "Mana",
-                          icon: <Zap className="h-4 w-4" />,
-                        },
-                        {
-                          key: "dexterity",
-                          label: "Dexterity",
-                          icon: <Shield className="h-4 w-4" />,
-                        },
-                        {
-                          key: "wisdom",
-                          label: "Wisdom",
-                          icon: <Brain className="h-4 w-4" />,
-                        },
-                        {
-                          key: "health",
-                          label: "Health",
-                          icon: <Heart className="h-4 w-4" />,
-                        },
-                      ].map(({ key, label, icon }) => (
-                        <div key={key}>
-                          <Label className="font-semibold flex items-center gap-1">
-                            {icon} {label}
-                          </Label>
-                          <Input
-                            type="number"
-                            min="1"
-                            max="80"
-                            value={
-                              character[
-                                key as keyof Omit<
-                                  Character,
-                                  "id" | "name" | "class"
+              {characters.map((character, index) => {
+                const currentClassInfo = classData[character.class]; // Get data for current class
+                return (
+                  <Card
+                    key={character.id}
+                    className="bg-card/90 backdrop-blur border-2 border-primary shadow-xl"
+                  >
+                    <CardHeader>
+                      <CardTitle className="font-fantasy text-xl text-primary">
+                        Character {index + 1}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* --- 3. UPDATED LAYOUT WITH INFO CARD --- */}
+                      <div className="flex flex-col xl:flex-row items-start gap-6">
+                        <div className="flex-grow w-full space-y-4">
+                          {/* ADDED: Character Portrait */}
+                          <div className="flex items-start gap-4">
+                            <img
+                              src={classPortraits[character.class]}
+                              alt={`${character.class} portrait`}
+                              className="h-24 w-24 rounded-lg border-2 border-accent object-cover shadow-lg"
+                            />
+                            <div className="flex-grow space-y-4">
+                              <div>
+                                <Label className="font-semibold">Name</Label>
+                                <Input
+                                  value={character.name}
+                                  onChange={(e) =>
+                                    updateCharacterStat(
+                                      index,
+                                      "name",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="Character name..."
+                                />
+                              </div>
+                              <div>
+                                <Label className="font-semibold">Class</Label>
+                                <Select
+                                  value={character.class}
+                                  onValueChange={(value) =>
+                                    handleCharacterClassChange(
+                                      index,
+                                      value as CharacterClass
+                                    )
+                                  }
                                 >
-                              ]
-                            }
-                            onChange={(e) =>
-                              updateCharacterStat(
-                                index,
-                                key as keyof Character,
-                                Number.parseInt(e.target.value) || 1
-                              )
-                            }
-                            className={
-                              !isValidPointAllocation(character)
-                                ? "border-destructive ring-destructive"
-                                : ""
-                            }
-                          />
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {Object.keys(classData).map((className) => (
+                                      <SelectItem
+                                        key={className}
+                                        value={className}
+                                      >
+                                        {className}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            {[
+                              {
+                                key: "strength",
+                                label: "Strength",
+                                icon: <Sword className="h-4 w-4" />,
+                              },
+                              {
+                                key: "agility",
+                                label: "Agility",
+                                icon: <Eye className="h-4 w-4" />,
+                              },
+                              {
+                                key: "mana",
+                                label: "Mana",
+                                icon: <Zap className="h-4 w-4" />,
+                              },
+                              {
+                                key: "dexterity",
+                                label: "Dexterity",
+                                icon: <Shield className="h-4 w-4" />,
+                              },
+                              {
+                                key: "wisdom",
+                                label: "Wisdom",
+                                icon: <Brain className="h-4 w-4" />,
+                              },
+                              {
+                                key: "health",
+                                label: "Health",
+                                icon: <Heart className="h-4 w-4" />,
+                              },
+                            ].map(({ key, label, icon }) => (
+                              <div key={key}>
+                                <Label className="font-semibold flex items-center gap-1">
+                                  {icon} {label}
+                                </Label>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  max="80"
+                                  value={
+                                    character[
+                                      key as keyof Omit<
+                                        Character,
+                                        "id" | "name" | "class"
+                                      >
+                                    ]
+                                  }
+                                  onChange={(e) =>
+                                    updateCharacterStat(
+                                      index,
+                                      key as keyof Character,
+                                      Number.parseInt(e.target.value) || 1
+                                    )
+                                  }
+                                  className={
+                                    !isValidPointAllocation(character)
+                                      ? "border-destructive ring-destructive"
+                                      : ""
+                                  }
+                                />
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                    <div className="mt-4 p-3 bg-muted/50 rounded-lg border">
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold">Total Points:</span>
-                        <span
-                          className={`font-bold ${
-                            getTotalPoints(character) > 80
-                              ? "text-red-500"
-                              : getTotalPoints(character) === 80
-                              ? "text-green-500"
-                              : "text-yellow-500"
-                          }`}
-                        >
-                          {getTotalPoints(character)} / 80
-                        </span>
+                        <div className="flex-shrink-0 w-full xl:w-auto">
+                          {currentClassInfo && (
+                            <ClassInfoCard info={currentClassInfo} />
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      <div className="mt-4 p-3 bg-muted/50 rounded-lg border">
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold">Total Points:</span>
+                          <span
+                            className={`font-bold ${
+                              getTotalPoints(character) > 80
+                                ? "text-red-500"
+                                : getTotalPoints(character) === 80
+                                ? "text-green-500"
+                                : "text-yellow-500"
+                            }`}
+                          >
+                            {getTotalPoints(character)} / 80
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
               <div className="text-center">
                 <Button
                   onClick={saveParty}
@@ -671,6 +811,7 @@ function PartySection({
             </div>
           </>
         ) : (
+          // ... (The rest of the file remains unchanged)
           <div className="max-w-4xl mx-auto space-y-8">
             <div className="flex justify-between items-center mb-8">
               <h1 className="font-fantasy text-4xl md:text-6xl text-primary glow-text">
@@ -682,19 +823,16 @@ function PartySection({
                   variant="outline"
                   className="border-accent text-accent-foreground hover:bg-accent/80"
                 >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Party
+                  <Edit className="h-4 w-4 mr-2" /> Edit Party
                 </Button>
                 <Button
                   onClick={deleteParty}
                   className="bg-destructive hover:bg-destructive/80"
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Party
+                  <Trash2 className="h-4 w-4 mr-2" /> Delete Party
                 </Button>
               </div>
             </div>
-
             {party?.members.map((member) => (
               <Card
                 key={member.id}
@@ -754,6 +892,7 @@ function EventsSection({
   const [isLoading, setIsLoading] = useState(false);
   const [showAdventure, setShowAdventure] = useState(false);
 
+  // FIXED: Corrected filenames and extensions to match your screenshot
   const events: GameEvent[] = [
     {
       id: "dragon-fight",
@@ -761,7 +900,7 @@ function EventsSection({
       description:
         "Face the mighty Ancient Red Dragon in its volcanic lair. Only the bravest heroes dare challenge this legendary beast.",
       icon: <Dragon className="h-12 w-12" />,
-      backgroundImage: "/dragon-cave-background.jpg",
+      backgroundImage: "/events/dragon-lair.jpeg",
       difficulty: "Hard",
     },
     {
@@ -770,7 +909,7 @@ function EventsSection({
       description:
         "Navigate through a dungeon filled with deadly traps and ancient mechanisms. One wrong step could be your last.",
       icon: <Skull className="h-12 w-12" />,
-      backgroundImage: "/dungeon-trap-background.jpg",
+      backgroundImage: "/events/dungeon-trap.jpeg",
       difficulty: "Medium",
     },
     {
@@ -779,7 +918,7 @@ function EventsSection({
       description:
         "Solve the riddles of the Crystal Chamber. Ancient magic protects powerful artifacts within these mystical halls.",
       icon: <Gem className="h-12 w-12" />,
-      backgroundImage: "/crystal-chamber-background.jpg",
+      backgroundImage: "/events/crystal-cave.jpeg",
       difficulty: "Easy",
     },
   ];
@@ -842,7 +981,7 @@ function EventsSection({
               </p>
               <Button
                 onClick={onBack}
-                className="mt-4 bg-primary hover:bg-primary/80 text-primary-foreground"
+                className="mt-4 h-9 px-4 text-sm bg-primary hover:bg-primary/80 text-primary-foreground"
               >
                 Create Party First
               </Button>
@@ -908,41 +1047,56 @@ function AdventureScreen({
   isLoading: boolean;
   onBack: () => void;
 }) {
+  // ... This component is unchanged
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [currentTurnCharacter, setCurrentTurnCharacter] = useState<string>("");
-
-  const handleOptimizeActions = () => {
-    if (!party || party.members.length === 0) return;
+  const handleOptimizeActions = async () => {
+    if (!party || party.members.length === 0 || !currentTurnCharacter) return;
     setIsAnalyzing(true);
     setAnalysisResult(null);
-
-    const encounterData: Encounter = {
-      event_type: event.name,
-      enemy: {
-        name: getEnemyName(event.name),
-        health: getEnemyHealth(event.name),
-      },
-    };
-
-    const partyData: AnalysisCharacter[] = party.members.map((member) => ({
-      name: member.name,
-      type: member.class,
-      strength: member.strength,
-      agility: member.agility,
-      health: member.health,
-      mana: member.mana,
-      dexterity: member.dexterity,
-      wisdom: member.wisdom,
-    }));
-
-    setTimeout(() => {
-      const result = analyzePartyVsEncounter(partyData, encounterData);
-      setAnalysisResult(result);
+    try {
+      const requestBody = {
+        party: party.members.map((member) => ({
+          name: member.name,
+          type: member.class,
+          strength: member.strength,
+          agility: member.agility,
+          health: member.health,
+          mana: member.mana,
+          dexterity: member.dexterity,
+          wisdom: member.wisdom,
+        })),
+        encounter: {
+          event_type: event.name,
+          enemy: {
+            name: getEnemyName(event.name),
+            health: getEnemyHealth(event.name),
+          },
+        },
+        current_turn_character: currentTurnCharacter,
+      };
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to get analysis from the server.");
+      }
+      const data = await response.json();
+      if (data.success) {
+        setAnalysisResult(data.analysis);
+      } else {
+        throw new Error(data.error || "An unknown error occurred.");
+      }
+    } catch (error) {
+      console.error("Error during analysis:", error);
+      alert("Could not retrieve analysis. Please try again.");
+    } finally {
       setIsAnalyzing(false);
-    }, 1500);
+    }
   };
-
   const getEnemyName = (eventName: EventType): string => {
     switch (eventName) {
       case "Dragon Fight":
@@ -955,7 +1109,6 @@ function AdventureScreen({
         return "Unknown Enemy";
     }
   };
-
   const getEnemyHealth = (eventName: EventType): number => {
     switch (eventName) {
       case "Dragon Fight":
@@ -968,13 +1121,11 @@ function AdventureScreen({
         return 100;
     }
   };
-
   const getSuccessColor = (rate: number): string => {
     if (rate >= 70) return "text-green-500";
     if (rate >= 40) return "text-yellow-500";
     return "text-red-500";
   };
-
   if (isLoading) {
     return (
       <div className="min-h-screen relative overflow-hidden flex items-center justify-center">
@@ -1016,7 +1167,6 @@ function AdventureScreen({
       </div>
     );
   }
-
   return (
     <div className="min-h-screen relative overflow-hidden">
       <div
@@ -1072,7 +1222,7 @@ function AdventureScreen({
                           key={member.id}
                           className="flex items-center justify-between text-sm"
                         >
-                          <span className="font-semibold">{member.name}</span>
+                          <span className="font-semibold">{member.name}</span>{" "}
                           <span className="text-muted-foreground">
                             {member.class}
                           </span>
@@ -1090,7 +1240,7 @@ function AdventureScreen({
                   <CardContent>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span>Difficulty:</span>
+                        <span>Difficulty:</span>{" "}
                         <span
                           className={`font-semibold ${getDifficultyColor(
                             event.difficulty
@@ -1100,13 +1250,13 @@ function AdventureScreen({
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Party Size:</span>
+                        <span>Party Size:</span>{" "}
                         <span className="font-semibold">
                           {party?.members.length} heroes
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Enemy:</span>
+                        <span>Enemy:</span>{" "}
                         <span className="font-semibold text-primary">
                           {getEnemyName(event.name)}
                         </span>
@@ -1143,13 +1293,12 @@ function AdventureScreen({
                 >
                   {isAnalyzing ? (
                     <>
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />{" "}
                       Analyzing...
                     </>
                   ) : (
                     <>
-                      <TrendingUp className="h-5 w-5 mr-2" />
-                      Optimize Actions
+                      <TrendingUp className="h-5 w-5 mr-2" /> Optimize Actions
                     </>
                   )}
                 </Button>
@@ -1203,7 +1352,7 @@ function AdventureScreen({
                           <div className="flex justify-between items-center">
                             <span className="font-semibold">
                               {char.character}
-                            </span>
+                            </span>{" "}
                             <span
                               className={`font-bold ${getSuccessColor(
                                 char.success_rate
@@ -1237,7 +1386,7 @@ function AdventureScreen({
                           key={index}
                           className="flex items-start gap-2 p-3 bg-accent/10 rounded-lg border border-accent/20"
                         >
-                          <div className="w-2 h-2 bg-accent rounded-full mt-2 flex-shrink-0" />
+                          <div className="w-2 h-2 bg-accent rounded-full mt-2 flex-shrink-0" />{" "}
                           <p className="text-sm">{rec}</p>
                         </div>
                       )
@@ -1252,366 +1401,3 @@ function AdventureScreen({
     </div>
   );
 }
-
-// --- START OF INTEGRATED ANALYSIS LOGIC ---
-// This entire section was moved from the API route into the client-side page.
-
-// --- INTERFACES FOR ANALYSIS LOGIC ---
-interface AnalysisCharacter {
-  name: string;
-  type: string;
-  strength: number;
-  agility: number;
-  health: number;
-  mana?: number;
-  dexterity?: number;
-  wisdom?: number;
-}
-interface Enemy {
-  name: string;
-  health: number;
-}
-interface Encounter {
-  event_type: string;
-  enemy: Enemy;
-}
-
-// --- CONTEXTUAL MONTE CARLO SIMULATION ---
-function simulateSingleEncounter(
-  party: AnalysisCharacter[],
-  encounter: Encounter
-): boolean {
-  switch (encounter.event_type) {
-    case "Mystic Puzzle": {
-      const totalWisdom = party.reduce(
-        (sum, char) => sum + (char.wisdom || 0),
-        0
-      );
-      const totalMana = party.reduce((sum, char) => sum + (char.mana || 0), 0);
-      const avgIntellect = (totalWisdom + totalMana) / (party.length * 2);
-      const successChance = Math.min(0.95, avgIntellect / 25);
-      return Math.random() < successChance;
-    }
-
-    case "Ancient Trap": {
-      const totalDexterity = party.reduce(
-        (sum, char) => sum + (char.dexterity || 0),
-        0
-      );
-      const totalAgility = party.reduce(
-        (sum, char) => sum + (char.agility || 0),
-        0
-      );
-      const avgFinesse = (totalDexterity + totalAgility) / (party.length * 2);
-      const successChance = Math.min(0.95, avgFinesse / 28);
-      return Math.random() < successChance;
-    }
-
-    case "Dragon Fight":
-    default: {
-      let enemyHealth = encounter.enemy.health;
-      let partyHealth = party.map((p) => p.health);
-      const weights = getStatWeights(encounter.event_type);
-
-      for (let round = 0; round < 50; round++) {
-        party.forEach((character, index) => {
-          if (partyHealth[index] <= 0) return;
-
-          const effectiveness =
-            (character.strength * weights.strength +
-              character.agility * weights.agility +
-              (character.dexterity || 0) * weights.dexterity +
-              (character.mana || 0) * weights.mana +
-              (character.wisdom || 0) * weights.wisdom) /
-            (weights.strength +
-              weights.agility +
-              weights.dexterity +
-              weights.mana +
-              weights.wisdom);
-
-          const successChance = Math.min(0.95, 0.2 + effectiveness / 25);
-          if (Math.random() < successChance) {
-            const damage = Math.floor(5 + Math.random() * (effectiveness / 2));
-            enemyHealth -= damage;
-            if (enemyHealth <= 0) return;
-          }
-        });
-
-        if (enemyHealth <= 0) return true;
-
-        const activePartyMembers = partyHealth
-          .map((h, i) => (h > 0 ? i : -1))
-          .filter((i) => i !== -1);
-        if (activePartyMembers.length === 0) return false;
-
-        const targetIndex =
-          activePartyMembers[
-            Math.floor(Math.random() * activePartyMembers.length)
-          ];
-        const enemyDamage = Math.floor(
-          5 + (encounter.enemy.health / 20) * Math.random()
-        );
-        partyHealth[targetIndex] -= enemyDamage;
-
-        if (partyHealth.every((h) => h <= 0)) return false;
-      }
-      return enemyHealth <= 0;
-    }
-  }
-}
-
-function runMonteCarloSimulation(
-  party: AnalysisCharacter[],
-  encounter: Encounter
-): number {
-  const NUM_TRIALS = 1000;
-  let wins = 0;
-  for (let i = 0; i < NUM_TRIALS; i++) {
-    if (simulateSingleEncounter(party, encounter)) {
-      wins++;
-    }
-  }
-  return Math.round((wins / NUM_TRIALS) * 100);
-}
-
-// --- HYBRID ANALYSIS CONTROLLER ---
-function analyzePartyVsEncounter(
-  party: AnalysisCharacter[],
-  encounter: Encounter
-) {
-  const partySuccessChance = runMonteCarloSimulation(party, encounter);
-  const weightedAnalysis = getWeightedAnalysis(
-    party,
-    encounter,
-    partySuccessChance
-  );
-
-  return {
-    party_success_chance: partySuccessChance,
-    individual_success_rates: weightedAnalysis.individual_success_rates,
-    encounter_difficulty: getEncounterDifficulty(encounter.event_type),
-    strategic_recommendations: weightedAnalysis.strategic_recommendations,
-  };
-}
-
-// --- GRANULAR WEIGHTING ALGORITHM & HELPERS ---
-interface StatWeights {
-  strength: number;
-  agility: number;
-  health: number;
-  mana: number;
-  dexterity: number;
-  wisdom: number;
-}
-
-function getStatWeights(eventType: string): StatWeights {
-  switch (eventType) {
-    case "Dragon Fight":
-      return {
-        strength: 1.3,
-        health: 1.2,
-        agility: 1.1,
-        mana: 1.1,
-        dexterity: 1.0,
-        wisdom: 0.9,
-      };
-    case "Ancient Trap":
-      return {
-        dexterity: 1.4,
-        agility: 1.3,
-        wisdom: 1.2,
-        health: 1.0,
-        mana: 0.9,
-        strength: 0.8,
-      };
-    case "Mystic Puzzle":
-      return {
-        wisdom: 1.5,
-        mana: 1.3,
-        dexterity: 1.0,
-        agility: 0.9,
-        health: 0.8,
-        strength: 0.7,
-      };
-    default:
-      return {
-        strength: 1.0,
-        agility: 1.0,
-        health: 1.0,
-        mana: 1.0,
-        dexterity: 1.0,
-        wisdom: 1.0,
-      };
-  }
-}
-
-function getWeightedAnalysis(
-  party: AnalysisCharacter[],
-  encounter: Encounter,
-  partySuccessChance: number
-) {
-  const weights = getStatWeights(encounter.event_type);
-  const totalWeight = Object.values(weights).reduce(
-    (sum, weight) => sum + weight,
-    0
-  );
-  const difficultyMultiplier = getDifficultyMultiplier(encounter.event_type);
-
-  const individualRates = party.map((character) => {
-    const charTotalWeighted =
-      character.strength * weights.strength +
-      character.agility * weights.agility +
-      character.health * weights.health +
-      (character.mana || 0) * weights.mana +
-      (character.dexterity || 0) * weights.dexterity +
-      (character.wisdom || 0) * weights.wisdom;
-
-    const charBaseRate = charTotalWeighted / (totalWeight * 15);
-    const charSuccessRate = Math.min(
-      95,
-      Math.max(15, 20 + charBaseRate * 75 * difficultyMultiplier)
-    );
-
-    return {
-      character: character.name,
-      success_rate: Math.round(charSuccessRate),
-      recommended_action: getRecommendedAction(character, encounter.event_type),
-    };
-  });
-
-  const recommendations = generateRecommendations(
-    party,
-    encounter,
-    partySuccessChance
-  );
-
-  return {
-    individual_success_rates: individualRates,
-    strategic_recommendations: recommendations,
-  };
-}
-
-function getDifficultyMultiplier(eventType: string): number {
-  switch (eventType) {
-    case "Dragon Fight":
-      return 0.85;
-    case "Ancient Trap":
-      return 0.9;
-    case "Mystic Puzzle":
-      return 1.0;
-    default:
-      return 0.95;
-  }
-}
-
-function getEncounterDifficulty(eventType: string): string {
-  switch (eventType) {
-    case "Dragon Fight":
-      return "Hard";
-    case "Ancient Trap":
-      return "Medium";
-    case "Mystic Puzzle":
-      return "Easy";
-    default:
-      return "Unknown";
-  }
-}
-
-function getRecommendedAction(
-  character: AnalysisCharacter,
-  eventType: string
-): string {
-  const stats = {
-    str: character.strength,
-    agi: character.agility,
-    dex: character.dexterity || 0,
-    wis: character.wisdom || 0,
-    mana: character.mana || 0,
-  };
-
-  switch (eventType) {
-    case "Dragon Fight":
-      if (stats.str > 15) return "Power Attack";
-      if (stats.mana > 15) return "Cast Fireball";
-      if (stats.agi > 15) return "Dodge and Weave";
-      return "Defensive Stance";
-    case "Ancient Trap":
-      if (stats.dex > 15) return "Disarm Trap";
-      if (stats.wis > 15) return "Analyze Mechanism";
-      if (stats.agi > 15) return "Evade Pressure Plate";
-      return "Provide Lookout";
-    case "Mystic Puzzle":
-      if (stats.wis > 15) return "Decipher Runes";
-      if (stats.mana > 15) return "Channel Insight";
-      if (stats.dex > 10) return "Manipulate Artifact";
-      return "Observe Patterns";
-    default:
-      return "Take Action";
-  }
-}
-
-function generateRecommendations(
-  party: AnalysisCharacter[],
-  encounter: Encounter,
-  successChance: number
-): string[] {
-  const recs: string[] = [];
-  const findBest = (stat: keyof Omit<AnalysisCharacter, "name" | "type">) =>
-    party.reduce((best, char) =>
-      (char[stat] || 0) > (best[stat] || 0) ? char : best
-    );
-
-  if (successChance < 40) {
-    recs.push(
-      "This is a highly challenging encounter. Survival should be the top priority; focus on defensive abilities and healing."
-    );
-  } else if (successChance > 75) {
-    recs.push(
-      "Your party has a clear advantage. A coordinated, aggressive strategy should secure a swift victory."
-    );
-  } else {
-    recs.push(
-      "The odds are balanced. A smart, tactical approach combining offense and defense is crucial for success."
-    );
-  }
-
-  switch (encounter.event_type) {
-    case "Dragon Fight":
-      const tank = findBest("health");
-      recs.push(
-        `Let ${tank.name} draw the dragon's attention while others attack from the flanks.`
-      );
-      const strongest = findBest("strength");
-      recs.push(
-        `${strongest.name} should focus on dealing maximum physical damage.`
-      );
-      break;
-    case "Ancient Trap":
-      const nimble = findBest("dexterity");
-      recs.push(
-        `${nimble.name} should take the lead to scout for and disarm any traps.`
-      );
-      const wiseTrap = findBest("wisdom");
-      if (wiseTrap.name !== nimble.name) {
-        recs.push(
-          `${wiseTrap.name} can assist by spotting the trap mechanisms from a distance.`
-        );
-      }
-      break;
-    case "Mystic Puzzle":
-      const wise = findBest("wisdom");
-      recs.push(
-        `The party should rely on ${wise.name}'s wisdom to solve the core puzzle.`
-      );
-      const mage = findBest("mana");
-      if (mage.name !== wise.name) {
-        recs.push(
-          `${mage.name} could use their mana to reveal hidden clues or magical auras.`
-        );
-      }
-      break;
-  }
-  return recs;
-}
-
-// --- END OF INTEGRATED ANALYSIS LOGIC ---
