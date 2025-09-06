@@ -1,14 +1,26 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Progress } from "@/components/ui/progress"
+import type React from "react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 import {
   Volume2,
   VolumeX,
@@ -26,67 +38,77 @@ import {
   Gem,
   Loader2,
   TrendingUp,
-} from "lucide-react"
+} from "lucide-react";
 
-type CharacterClass = "Mage" | "Barbarian" | "Rogue" | "Bandit"
+type CharacterClass = "Mage" | "Barbarian" | "Rogue" | "Bandit";
 
 interface Character {
-  id: string
-  name: string
-  class: CharacterClass
-  strength: number
-  agility: number
-  mana: number
-  dexterity: number
-  wisdom: number
-  health: number
+  id: string;
+  name: string;
+  class: CharacterClass;
+  strength: number;
+  agility: number;
+  mana: number;
+  dexterity: number;
+  wisdom: number;
+  health: number;
 }
 
 interface Party {
-  name: string
-  members: Character[]
+  name: string;
+  members: Character[];
 }
 
-type EventType = "Dragon Fight" | "Ancient Trap" | "Mystic Puzzle"
+type EventType = "Dragon Fight" | "Ancient Trap" | "Mystic Puzzle";
 
 interface GameEvent {
-  id: string
-  name: EventType
-  description: string
-  icon: React.ReactNode
-  backgroundImage: string
-  difficulty: "Easy" | "Medium" | "Hard"
+  id: string;
+  name: EventType;
+  description: string;
+  icon: React.ReactNode;
+  backgroundImage: string;
+  difficulty: "Easy" | "Medium" | "Hard";
 }
 
 export default function HomePage() {
-  const [diceValue, setDiceValue] = useState<number | null>(null)
-  const [isSpinning, setIsSpinning] = useState(false)
-  const [musicPlaying, setMusicPlaying] = useState(false)
-  const [currentSection, setCurrentSection] = useState<"home" | "party" | "events">("home")
-  const [party, setParty] = useState<Party | null>(null)
+  const [diceValue, setDiceValue] = useState<number | null>(null);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [musicPlaying, setMusicPlaying] = useState(false);
+  const [currentSection, setCurrentSection] = useState<
+    "home" | "party" | "events"
+  >("home");
+  const [party, setParty] = useState<Party | null>(null);
 
   const rollDice = () => {
-    setIsSpinning(true)
-    setDiceValue(null)
+    setIsSpinning(true);
+    setDiceValue(null);
 
     setTimeout(() => {
-      const roll = Math.floor(Math.random() * 20) + 1
-      setDiceValue(roll)
-      setIsSpinning(false)
-    }, 2000)
-  }
+      const roll = Math.floor(Math.random() * 20) + 1;
+      setDiceValue(roll);
+      setIsSpinning(false);
+    }, 2000);
+  };
 
   const toggleMusic = () => {
-    setMusicPlaying(!musicPlaying)
+    setMusicPlaying(!musicPlaying);
     // In a real app, this would control audio playback
-  }
+  };
 
   if (currentSection === "party") {
-    return <PartySection onBack={() => setCurrentSection("home")} party={party} setParty={setParty} />
+    return (
+      <PartySection
+        onBack={() => setCurrentSection("home")}
+        party={party}
+        setParty={setParty}
+      />
+    );
   }
 
   if (currentSection === "events") {
-    return <EventsSection onBack={() => setCurrentSection("home")} party={party} />
+    return (
+      <EventsSection onBack={() => setCurrentSection("home")} party={party} />
+    );
   }
 
   return (
@@ -100,88 +122,95 @@ export default function HomePage() {
         className="fixed bottom-6 left-6 z-50 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-full p-3"
         size="icon"
       >
-        {musicPlaying ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+        {musicPlaying ? (
+          <Volume2 className="h-5 w-5" />
+        ) : (
+          <VolumeX className="h-5 w-5" />
+        )}
       </Button>
 
-     {/* Learn D&D Modal - Bottom Right */}
-<Dialog>
-  <DialogTrigger asChild>
-    <Button
-      className="fixed bottom-6 right-6 z-50 bg-accent hover:bg-accent/80 text-accent-foreground 
+      {/* Learn D&D Modal - Bottom Right */}
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button
+            className="fixed bottom-6 right-6 z-50 bg-accent hover:bg-accent/80 text-accent-foreground 
                  rounded-full px-4 py-2 flex items-center gap-2 whitespace-nowrap shadow-lg"
-      size="sm"
-    >
-      <HelpCircle className="h-4 w-4" />
-      <span className="hidden sm:inline">Learn D&D</span>
-    </Button>
-  </DialogTrigger>
+            size="sm"
+          >
+            <HelpCircle className="h-4 w-4" />
+            <span className="hidden sm:inline">Learn D&D</span>
+          </Button>
+        </DialogTrigger>
 
-  <DialogContent
-    className="max-w-2xl w-[95%] sm:w-full bg-card border-2 border-border 
+        <DialogContent
+          className="max-w-2xl w-[95%] sm:w-full bg-card border-2 border-border 
                sm:rounded-lg rounded-none sm:mx-0 mx-2 max-h-[90vh] flex flex-col"
-  >
-    <DialogHeader>
-      <DialogTitle className="font-fantasy text-2xl text-primary glow-text">
-        Dungeons & Dragons Guide
-      </DialogTitle>
-    </DialogHeader>
+        >
+          <DialogHeader>
+            <DialogTitle className="font-fantasy text-2xl text-primary glow-text">
+              Dungeons & Dragons Guide
+            </DialogTitle>
+          </DialogHeader>
 
-    {/* Scrollable body */}
-    <div className="space-y-4 text-card-foreground overflow-y-auto pr-2 flex-1">
-      <p className="text-lg">
-        Dungeons & Dragons (D&D) is a tabletop role-playing game where players
-        create characters and embark on adventures guided by a Dungeon Master
-        (DM). It's a game of imagination, strategy, and collaborative
-        storytelling.
-      </p>
+          {/* Scrollable body */}
+          <div className="space-y-4 text-card-foreground overflow-y-auto pr-2 flex-1">
+            <p className="text-lg">
+              Dungeons & Dragons (D&D) is a tabletop role-playing game where
+              players create characters and embark on adventures guided by a
+              Dungeon Master (DM). It's a game of imagination, strategy, and
+              collaborative storytelling.
+            </p>
 
-      <div>
-        <h3 className="font-fantasy text-xl text-primary mb-2">Core Concepts</h3>
-        <ul className="list-disc list-inside space-y-1">
-          <li>
-            <strong>Characters:</strong> Players create heroes with unique
-            abilities, backgrounds, and personalities
-          </li>
-          <li>
-            <strong>Classes:</strong> Different character types like Warriors,
-            Mages, Rogues, and Clerics
-          </li>
-          <li>
-            <strong>Stats:</strong> Numerical values representing character
-            abilities (Strength, Agility, Health, etc.)
-          </li>
-          <li>
-            <strong>Encounters:</strong> Challenges and battles that test the
-            party's skills and teamwork
-          </li>
-        </ul>
-      </div>
+            <div>
+              <h3 className="font-fantasy text-xl text-primary mb-2">
+                Core Concepts
+              </h3>
+              <ul className="list-disc list-inside space-y-1">
+                <li>
+                  <strong>Characters:</strong> Players create heroes with unique
+                  abilities, backgrounds, and personalities
+                </li>
+                <li>
+                  <strong>Classes:</strong> Different character types like
+                  Warriors, Mages, Rogues, and Clerics
+                </li>
+                <li>
+                  <strong>Stats:</strong> Numerical values representing
+                  character abilities (Strength, Agility, Health, etc.)
+                </li>
+                <li>
+                  <strong>Encounters:</strong> Challenges and battles that test
+                  the party's skills and teamwork
+                </li>
+              </ul>
+            </div>
 
-      <div>
-        <h3 className="font-fantasy text-xl text-primary mb-2">How It Works</h3>
-        <p>
-          Players work together as a party to overcome obstacles, solve puzzles,
-          and defeat enemies. The game uses dice rolls to determine the success
-          of actions, adding an element of chance and excitement to every
-          decision.
-        </p>
-      </div>
+            <div>
+              <h3 className="font-fantasy text-xl text-primary mb-2">
+                How It Works
+              </h3>
+              <p>
+                Players work together as a party to overcome obstacles, solve
+                puzzles, and defeat enemies. The game uses dice rolls to
+                determine the success of actions, adding an element of chance
+                and excitement to every decision.
+              </p>
+            </div>
 
-      <div>
-        <h3 className="font-fantasy text-xl text-primary mb-2">
-          Why Use an Optimizer?
-        </h3>
-        <p>
-          The Hero Squad Optimizer helps players make strategic decisions during
-          combat encounters. By analyzing party composition, enemy threats, and
-          character abilities, it suggests the most effective actions to
-          maximize your chances of success.
-        </p>
-      </div>
-    </div>
-  </DialogContent>
-</Dialog>
-
+            <div>
+              <h3 className="font-fantasy text-xl text-primary mb-2">
+                Why Use an Optimizer?
+              </h3>
+              <p>
+                The Hero Squad Optimizer helps players make strategic decisions
+                during combat encounters. By analyzing party composition, enemy
+                threats, and character abilities, it suggests the most effective
+                actions to maximize your chances of success.
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Main Content */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-8">
@@ -193,27 +222,49 @@ export default function HomePage() {
         {/* D20 Dice */}
         <div className="mb-12">
           <div
-            className={`relative cursor-pointer transition-transform hover:scale-105 ${isSpinning ? "animate-spin" : ""}`}
+            className={`relative cursor-pointer transition-transform hover:scale-105 ${
+              isSpinning ? "animate-spin" : ""
+            }`}
             onClick={rollDice}
           >
             <div className="w-48 h-48 relative perspective-1000">
               <div
-                className={`w-full h-full transform-style-3d transition-transform duration-2000 ${isSpinning ? "rotate-3d" : ""}`}
+                className={`w-full h-full transform-style-3d transition-transform duration-2000 ${
+                  isSpinning ? "rotate-3d" : ""
+                }`}
               >
                 <svg viewBox="0 0 200 200" className="w-full h-full">
                   <defs>
-                    <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <linearGradient
+                      id="purpleGradient"
+                      x1="0%"
+                      y1="0%"
+                      x2="100%"
+                      y2="100%"
+                    >
                       <stop offset="0%" stopColor="#9333ea" />
                       <stop offset="30%" stopColor="#7c3aed" />
                       <stop offset="70%" stopColor="#5b21b6" />
                       <stop offset="100%" stopColor="#4c1d95" />
                     </linearGradient>
-                    <linearGradient id="purpleGradient2" x1="100%" y1="0%" x2="0%" y2="100%">
+                    <linearGradient
+                      id="purpleGradient2"
+                      x1="100%"
+                      y1="0%"
+                      x2="0%"
+                      y2="100%"
+                    >
                       <stop offset="0%" stopColor="#a855f7" />
                       <stop offset="50%" stopColor="#8b5cf6" />
                       <stop offset="100%" stopColor="#6d28d9" />
                     </linearGradient>
-                    <linearGradient id="purpleGradient3" x1="50%" y1="0%" x2="50%" y2="100%">
+                    <linearGradient
+                      id="purpleGradient3"
+                      x1="50%"
+                      y1="0%"
+                      x2="50%"
+                      y2="100%"
+                    >
                       <stop offset="0%" stopColor="#c084fc" />
                       <stop offset="100%" stopColor="#7c3aed" />
                     </linearGradient>
@@ -363,7 +414,9 @@ export default function HomePage() {
               {diceValue && !isSpinning && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="bg-black/80 rounded-lg px-4 py-2 border border-amber-400">
-                    <span className="font-fantasy text-3xl font-bold text-amber-300 glow-text">{diceValue}</span>
+                    <span className="font-fantasy text-3xl font-bold text-amber-300 glow-text">
+                      {diceValue}
+                    </span>
                   </div>
                 </div>
               )}
@@ -374,8 +427,8 @@ export default function HomePage() {
             {isSpinning
               ? "Rolling the sacred die..."
               : diceValue
-                ? `The fates decree: ${diceValue}!`
-                : "Click the D20 to consult the fates!"}
+              ? `The fates decree: ${diceValue}!`
+              : "Click the D20 to consult the fates!"}
           </p>
         </div>
 
@@ -397,7 +450,7 @@ export default function HomePage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function PartySection({
@@ -405,14 +458,14 @@ function PartySection({
   party,
   setParty,
 }: {
-  onBack: () => void
-  party: Party | null
-  setParty: (party: Party | null) => void
+  onBack: () => void;
+  party: Party | null;
+  setParty: (party: Party | null) => void;
 }) {
-  const [partyName, setPartyName] = useState("")
-  const [memberCount, setMemberCount] = useState(1)
-  const [characters, setCharacters] = useState<Character[]>([])
-  const [isCreating, setIsCreating] = useState(!party)
+  const [partyName, setPartyName] = useState("");
+  const [memberCount, setMemberCount] = useState(1);
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [isCreating, setIsCreating] = useState(!party);
 
   const createNewCharacter = (): Character => ({
     id: Math.random().toString(36).substr(2, 9),
@@ -424,19 +477,26 @@ function PartySection({
     dexterity: 13,
     wisdom: 14,
     health: 13, // Total: 80 points (balanced distribution)
-  })
+  });
 
   const handleMemberCountChange = (count: number) => {
-    setMemberCount(count)
-    const newCharacters = Array.from({ length: count }, (_, i) => characters[i] || createNewCharacter())
-    setCharacters(newCharacters.slice(0, count))
-  }
+    setMemberCount(count);
+    const newCharacters = Array.from(
+      { length: count },
+      (_, i) => characters[i] || createNewCharacter()
+    );
+    setCharacters(newCharacters.slice(0, count));
+  };
 
-  const updateCharacter = (index: number, field: keyof Character, value: string | number) => {
-    const updated = [...characters]
-    updated[index] = { ...updated[index], [field]: value }
-    setCharacters(updated)
-  }
+  const updateCharacter = (
+    index: number,
+    field: keyof Character,
+    value: string | number
+  ) => {
+    const updated = [...characters];
+    updated[index] = { ...updated[index], [field]: value };
+    setCharacters(updated);
+  };
 
   const getTotalPoints = (character: Character): number => {
     return (
@@ -446,41 +506,41 @@ function PartySection({
       character.dexterity +
       character.wisdom +
       character.health
-    )
-  }
+    );
+  };
 
   const isValidPointAllocation = (character: Character): boolean => {
-    return getTotalPoints(character) <= 80
-  }
+    return getTotalPoints(character) <= 80;
+  };
 
   const createParty = () => {
-    const allValid = characters.every((char) => isValidPointAllocation(char))
+    const allValid = characters.every((char) => isValidPointAllocation(char));
     if (partyName && characters.length > 0 && allValid) {
-      setParty({ name: partyName, members: characters })
-      setIsCreating(false)
+      setParty({ name: partyName, members: characters });
+      setIsCreating(false);
     }
-  }
+  };
 
   const deleteParty = () => {
-    setParty(null)
-    setIsCreating(true)
-    setPartyName("")
-    setCharacters([])
-    setMemberCount(1)
-  }
+    setParty(null);
+    setIsCreating(true);
+    setPartyName("");
+    setCharacters([]);
+    setMemberCount(1);
+  };
 
   const getClassIcon = (characterClass: CharacterClass) => {
     switch (characterClass) {
       case "Mage":
-        return <Zap className="h-5 w-5" />
+        return <Zap className="h-5 w-5" />;
       case "Barbarian":
-        return <Sword className="h-5 w-5" />
+        return <Sword className="h-5 w-5" />;
       case "Rogue":
-        return <Eye className="h-5 w-5" />
+        return <Eye className="h-5 w-5" />;
       case "Bandit":
-        return <Shield className="h-5 w-5" />
+        return <Shield className="h-5 w-5" />;
     }
-  }
+  };
 
   const getClassImage = (characterClass: CharacterClass) => {
     const images = {
@@ -488,9 +548,9 @@ function PartySection({
       Barbarian: "/fantasy-barbarian-warrior-with-axe.jpg",
       Rogue: "/fantasy-rogue-with-bow-and-hood.jpg",
       Bandit: "/fantasy-bandit-with-dagger-and-mask.jpg",
-    }
-    return images[characterClass]
-  }
+    };
+    return images[characterClass];
+  };
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -499,7 +559,10 @@ function PartySection({
 
       <div className="relative z-10 p-8">
         <div className="flex items-center justify-between mb-8">
-          <Button onClick={onBack} className="bg-secondary hover:bg-secondary/80 text-secondary-foreground">
+          <Button
+            onClick={onBack}
+            className="bg-secondary hover:bg-secondary/80 text-secondary-foreground"
+          >
             ← Back to Home
           </Button>
           {party && !isCreating && (
@@ -542,12 +605,17 @@ function PartySection({
                 </div>
 
                 <div>
-                  <Label htmlFor="memberCount" className="text-lg font-semibold">
+                  <Label
+                    htmlFor="memberCount"
+                    className="text-lg font-semibold"
+                  >
                     Number of Members
                   </Label>
                   <Select
                     value={memberCount.toString()}
-                    onValueChange={(value) => handleMemberCountChange(Number.parseInt(value))}
+                    onValueChange={(value) =>
+                      handleMemberCountChange(Number.parseInt(value))
+                    }
                   >
                     <SelectTrigger className="mt-2">
                       <SelectValue />
@@ -566,9 +634,14 @@ function PartySection({
 
             {/* Character Creation Forms */}
             {characters.map((character, index) => (
-              <Card key={character.id} className="bg-card/90 backdrop-blur border-2 border-primary shadow-xl">
+              <Card
+                key={character.id}
+                className="bg-card/90 backdrop-blur border-2 border-primary shadow-xl"
+              >
                 <CardHeader>
-                  <CardTitle className="font-fantasy text-xl text-primary">Character {index + 1}</CardTitle>
+                  <CardTitle className="font-fantasy text-xl text-primary">
+                    Character {index + 1}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -576,7 +649,9 @@ function PartySection({
                       <Label className="font-semibold">Name</Label>
                       <Input
                         value={character.name}
-                        onChange={(e) => updateCharacter(index, "name", e.target.value)}
+                        onChange={(e) =>
+                          updateCharacter(index, "name", e.target.value)
+                        }
                         placeholder="Character name..."
                       />
                     </div>
@@ -584,7 +659,13 @@ function PartySection({
                       <Label className="font-semibold">Class</Label>
                       <Select
                         value={character.class}
-                        onValueChange={(value) => updateCharacter(index, "class", value as CharacterClass)}
+                        onValueChange={(value) =>
+                          updateCharacter(
+                            index,
+                            "class",
+                            value as CharacterClass
+                          )
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -601,12 +682,36 @@ function PartySection({
 
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {[
-                      { key: "strength", label: "Strength", icon: <Sword className="h-4 w-4" /> },
-                      { key: "agility", label: "Agility", icon: <Eye className="h-4 w-4" /> },
-                      { key: "mana", label: "Mana", icon: <Zap className="h-4 w-4" /> },
-                      { key: "dexterity", label: "Dexterity", icon: <Shield className="h-4 w-4" /> },
-                      { key: "wisdom", label: "Wisdom", icon: <Brain className="h-4 w-4" /> },
-                      { key: "health", label: "Health", icon: <Heart className="h-4 w-4" /> },
+                      {
+                        key: "strength",
+                        label: "Strength",
+                        icon: <Sword className="h-4 w-4" />,
+                      },
+                      {
+                        key: "agility",
+                        label: "Agility",
+                        icon: <Eye className="h-4 w-4" />,
+                      },
+                      {
+                        key: "mana",
+                        label: "Mana",
+                        icon: <Zap className="h-4 w-4" />,
+                      },
+                      {
+                        key: "dexterity",
+                        label: "Dexterity",
+                        icon: <Shield className="h-4 w-4" />,
+                      },
+                      {
+                        key: "wisdom",
+                        label: "Wisdom",
+                        icon: <Brain className="h-4 w-4" />,
+                      },
+                      {
+                        key: "health",
+                        label: "Health",
+                        icon: <Heart className="h-4 w-4" />,
+                      },
                     ].map(({ key, label, icon }) => (
                       <div key={key}>
                         <Label className="font-semibold flex items-center gap-1">
@@ -619,9 +724,17 @@ function PartySection({
                           max="80"
                           value={character[key as keyof Character]}
                           onChange={(e) =>
-                            updateCharacter(index, key as keyof Character, Number.parseInt(e.target.value) || 1)
+                            updateCharacter(
+                              index,
+                              key as keyof Character,
+                              Number.parseInt(e.target.value) || 1
+                            )
                           }
-                          className={!isValidPointAllocation(character) ? "border-red-500" : ""}
+                          className={
+                            !isValidPointAllocation(character)
+                              ? "border-red-500"
+                              : ""
+                          }
                         />
                       </div>
                     ))}
@@ -631,19 +744,27 @@ function PartySection({
                     <div className="flex justify-between items-center">
                       <span className="font-semibold">Total Points:</span>
                       <span
-                        className={`font-bold ${getTotalPoints(character) > 80 ? "text-red-500" : getTotalPoints(character) === 80 ? "text-green-500" : "text-yellow-500"}`}
+                        className={`font-bold ${
+                          getTotalPoints(character) > 80
+                            ? "text-red-500"
+                            : getTotalPoints(character) === 80
+                            ? "text-green-500"
+                            : "text-yellow-500"
+                        }`}
                       >
                         {getTotalPoints(character)} / 80
                       </span>
                     </div>
                     {getTotalPoints(character) > 80 && (
                       <p className="text-red-500 text-sm mt-1">
-                        ⚠️ Exceeds point limit! Reduce stats by {getTotalPoints(character) - 80} points.
+                        ⚠️ Exceeds point limit! Reduce stats by{" "}
+                        {getTotalPoints(character) - 80} points.
                       </p>
                     )}
                     {getTotalPoints(character) < 80 && (
                       <p className="text-yellow-600 text-sm mt-1">
-                        💡 You have {80 - getTotalPoints(character)} points remaining to allocate.
+                        💡 You have {80 - getTotalPoints(character)} points
+                        remaining to allocate.
                       </p>
                     )}
                   </div>
@@ -673,7 +794,9 @@ function PartySection({
                   <CardHeader className="text-center">
                     <div className="mx-auto mb-4 relative">
                       <img
-                        src={getClassImage(character.class) || "/placeholder.svg"}
+                        src={
+                          getClassImage(character.class) || "/placeholder.svg"
+                        }
                         alt={`${character.class} character`}
                         className="w-24 h-24 rounded-full border-4 border-accent group-hover:border-primary transition-colors"
                       />
@@ -681,8 +804,12 @@ function PartySection({
                         {getClassIcon(character.class)}
                       </div>
                     </div>
-                    <CardTitle className="font-fantasy text-xl text-primary">{character.name}</CardTitle>
-                    <p className="text-muted-foreground font-semibold">{character.class}</p>
+                    <CardTitle className="font-fantasy text-xl text-primary">
+                      {character.name}
+                    </CardTitle>
+                    <p className="text-muted-foreground font-semibold">
+                      {character.class}
+                    </p>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 gap-2 text-sm">
@@ -744,13 +871,19 @@ function PartySection({
         )}
       </div>
     </div>
-  )
+  );
 }
 
-function EventsSection({ onBack, party }: { onBack: () => void; party: Party | null }) {
-  const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [showAdventure, setShowAdventure] = useState(false)
+function EventsSection({
+  onBack,
+  party,
+}: {
+  onBack: () => void;
+  party: Party | null;
+}) {
+  const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showAdventure, setShowAdventure] = useState(false);
 
   const events: GameEvent[] = [
     {
@@ -780,36 +913,36 @@ function EventsSection({ onBack, party }: { onBack: () => void; party: Party | n
       backgroundImage: "/crystal-chamber-background.jpg",
       difficulty: "Easy",
     },
-  ]
+  ];
 
   const handleEventSelect = (event: GameEvent) => {
     if (!party || party.members.length === 0) {
-      alert("You need to create a party first!")
-      return
+      alert("You need to create a party first!");
+      return;
     }
 
-    setSelectedEvent(event)
-    setIsLoading(true)
-    setShowAdventure(true)
+    setSelectedEvent(event);
+    setIsLoading(true);
+    setShowAdventure(true);
 
     // Simulate loading time
     setTimeout(() => {
-      setIsLoading(false)
-    }, 3000)
-  }
+      setIsLoading(false);
+    }, 3000);
+  };
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case "Easy":
-        return "text-green-500"
+        return "text-green-500";
       case "Medium":
-        return "text-yellow-500"
+        return "text-yellow-500";
       case "Hard":
-        return "text-red-500"
+        return "text-red-500";
       default:
-        return "text-muted-foreground"
+        return "text-muted-foreground";
     }
-  }
+  };
 
   if (showAdventure && selectedEvent) {
     return (
@@ -818,12 +951,12 @@ function EventsSection({ onBack, party }: { onBack: () => void; party: Party | n
         party={party}
         isLoading={isLoading}
         onBack={() => {
-          setShowAdventure(false)
-          setSelectedEvent(null)
-          setIsLoading(false)
+          setShowAdventure(false);
+          setSelectedEvent(null);
+          setIsLoading(false);
         }}
       />
-    )
+    );
   }
 
   return (
@@ -833,14 +966,19 @@ function EventsSection({ onBack, party }: { onBack: () => void; party: Party | n
 
       <div className="relative z-10 p-8">
         <div className="flex items-center justify-between mb-8">
-          <Button onClick={onBack} className="bg-secondary hover:bg-secondary/80 text-secondary-foreground">
+          <Button
+            onClick={onBack}
+            className="bg-secondary hover:bg-secondary/80 text-secondary-foreground"
+          >
             ← Back to Home
           </Button>
           {party && (
             <div className="text-right">
               <p className="text-sm text-muted-foreground">Current Party</p>
               <p className="font-fantasy text-lg text-primary">{party.name}</p>
-              <p className="text-sm text-muted-foreground">{party.members.length} members</p>
+              <p className="text-sm text-muted-foreground">
+                {party.members.length} members
+              </p>
             </div>
           )}
         </div>
@@ -855,7 +993,10 @@ function EventsSection({ onBack, party }: { onBack: () => void; party: Party | n
               <p className="text-lg text-destructive-foreground">
                 You need to create a party before embarking on an adventure!
               </p>
-              <Button onClick={onBack} className="mt-4 bg-primary hover:bg-primary/80 text-primary-foreground">
+              <Button
+                onClick={onBack}
+                className="mt-4 bg-primary hover:bg-primary/80 text-primary-foreground"
+              >
                 Create Party First
               </Button>
             </CardContent>
@@ -871,20 +1012,28 @@ function EventsSection({ onBack, party }: { onBack: () => void; party: Party | n
             >
               <CardHeader className="text-center">
                 <div className="mx-auto mb-4 p-6 bg-primary/10 rounded-full border-4 border-accent group-hover:border-primary transition-colors group-hover:bg-primary/20">
-                  <div className="text-primary group-hover:text-accent transition-colors">{event.icon}</div>
+                  <div className="text-primary group-hover:text-accent transition-colors">
+                    {event.icon}
+                  </div>
                 </div>
                 <CardTitle className="font-fantasy text-2xl text-primary group-hover:glow-text transition-all">
                   {event.name}
                 </CardTitle>
                 <div className="flex items-center justify-center gap-2">
                   <span className="text-sm font-semibold">Difficulty:</span>
-                  <span className={`text-sm font-bold ${getDifficultyColor(event.difficulty)}`}>
+                  <span
+                    className={`text-sm font-bold ${getDifficultyColor(
+                      event.difficulty
+                    )}`}
+                  >
                     {event.difficulty}
                   </span>
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-card-foreground text-center leading-relaxed">{event.description}</p>
+                <p className="text-card-foreground text-center leading-relaxed">
+                  {event.description}
+                </p>
 
                 <div className="mt-6 text-center">
                   <Button
@@ -898,7 +1047,9 @@ function EventsSection({ onBack, party }: { onBack: () => void; party: Party | n
                 {/* Hidden details shown on hover */}
                 <div className="mt-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   <div className="text-xs text-muted-foreground border-t border-border pt-2 text-center">
-                    <p className="font-semibold">Click to start this encounter</p>
+                    <p className="font-semibold">
+                      Click to start this encounter
+                    </p>
                     {party && (
                       <p>
                         Party: {party.name} ({party.members.length} heroes)
@@ -915,12 +1066,14 @@ function EventsSection({ onBack, party }: { onBack: () => void; party: Party | n
           <div className="mt-12 text-center">
             <Card className="max-w-2xl mx-auto bg-card/90 backdrop-blur border-2 border-accent">
               <CardHeader>
-                <CardTitle className="font-fantasy text-xl text-primary">Ready for Adventure?</CardTitle>
+                <CardTitle className="font-fantasy text-xl text-primary">
+                  Ready for Adventure?
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-card-foreground mb-4">
-                  Your party "{party.name}" is ready to face any challenge. Choose an encounter above to begin your
-                  quest!
+                  Your party "{party.name}" is ready to face any challenge.
+                  Choose an encounter above to begin your quest!
                 </p>
                 <div className="flex flex-wrap justify-center gap-2">
                   {party.members.map((member, index) => (
@@ -938,7 +1091,7 @@ function EventsSection({ onBack, party }: { onBack: () => void; party: Party | n
         )}
       </div>
     </div>
-  )
+  );
 }
 
 function AdventureScreen({
@@ -947,19 +1100,19 @@ function AdventureScreen({
   isLoading,
   onBack,
 }: {
-  event: GameEvent
-  party: Party | null
-  isLoading: boolean
-  onBack: () => void
+  event: GameEvent;
+  party: Party | null;
+  isLoading: boolean;
+  onBack: () => void;
 }) {
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [analysisResult, setAnalysisResult] = useState<any>(null)
-  const [currentTurnCharacter, setCurrentTurnCharacter] = useState<string>("")
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [currentTurnCharacter, setCurrentTurnCharacter] = useState<string>("");
 
   const handleOptimizeActions = async () => {
-    if (!party || party.members.length === 0) return
+    if (!party || party.members.length === 0) return;
 
-    setIsAnalyzing(true)
+    setIsAnalyzing(true);
 
     try {
       // Prepare API request data according to specification
@@ -982,7 +1135,7 @@ function AdventureScreen({
           },
         },
         current_turn_character: currentTurnCharacter || party.members[0].name,
-      }
+      };
 
       const response = await fetch("/api/analyze", {
         method: "POST",
@@ -990,53 +1143,53 @@ function AdventureScreen({
           "Content-Type": "application/json",
         },
         body: JSON.stringify(requestData),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to analyze party")
+        throw new Error("Failed to analyze party");
       }
 
-      const result = await response.json()
-      setAnalysisResult(result.analysis)
+      const result = await response.json();
+      setAnalysisResult(result.analysis);
     } catch (error) {
-      console.error("Error analyzing party:", error)
-      alert("Failed to analyze party. Please try again.")
+      console.error("Error analyzing party:", error);
+      alert("Failed to analyze party. Please try again.");
     } finally {
-      setIsAnalyzing(false)
+      setIsAnalyzing(false);
     }
-  }
+  };
 
   const getEnemyName = (eventName: EventType): string => {
     switch (eventName) {
       case "Dragon Fight":
-        return "Ancient Red Dragon"
+        return "Ancient Red Dragon";
       case "Ancient Trap":
-        return "Mechanical Guardian"
+        return "Mechanical Guardian";
       case "Mystic Puzzle":
-        return "Crystal Sentinel"
+        return "Crystal Sentinel";
       default:
-        return "Unknown Enemy"
+        return "Unknown Enemy";
     }
-  }
+  };
 
   const getEnemyHealth = (eventName: EventType): number => {
     switch (eventName) {
       case "Dragon Fight":
-        return 250
+        return 250;
       case "Ancient Trap":
-        return 150
+        return 150;
       case "Mystic Puzzle":
-        return 100
+        return 100;
       default:
-        return 100
+        return 100;
     }
-  }
+  };
 
   const getSuccessColor = (rate: number): string => {
-    if (rate >= 70) return "text-green-500"
-    if (rate >= 40) return "text-yellow-500"
-    return "text-red-500"
-  }
+    if (rate >= 70) return "text-green-500";
+    if (rate >= 40) return "text-yellow-500";
+    return "text-red-500";
+  };
 
   if (isLoading) {
     return (
@@ -1051,14 +1204,21 @@ function AdventureScreen({
         <Card className="relative z-10 max-w-2xl mx-auto bg-card/95 backdrop-blur border-4 border-accent shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-1000">
           <CardContent className="p-12 text-center">
             <div className="mb-6">
-              <div className="text-primary mb-4 animate-pulse">{event.icon}</div>
-              <h1 className="font-fantasy text-4xl text-primary glow-text mb-4">Adventure Begins</h1>
+              <div className="text-primary mb-4 animate-pulse">
+                {event.icon}
+              </div>
+              <h1 className="font-fantasy text-4xl text-primary glow-text mb-4">
+                Adventure Begins
+              </h1>
             </div>
 
             <div className="space-y-4">
               <div className="animate-pulse">
                 <div className="h-2 bg-primary/30 rounded-full overflow-hidden">
-                  <div className="h-full bg-primary rounded-full animate-pulse" style={{ width: "60%" }} />
+                  <div
+                    className="h-full bg-primary rounded-full animate-pulse"
+                    style={{ width: "60%" }}
+                  />
                 </div>
               </div>
 
@@ -1075,7 +1235,7 @@ function AdventureScreen({
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -1089,14 +1249,23 @@ function AdventureScreen({
 
       <div className="relative z-10 p-8">
         <div className="flex items-center justify-between mb-8">
-          <Button onClick={onBack} className="bg-secondary hover:bg-secondary/80 text-secondary-foreground">
+          <Button
+            onClick={onBack}
+            className="bg-secondary hover:bg-secondary/80 text-secondary-foreground"
+          >
             ← Back to Events
           </Button>
           <div className="text-right">
             <p className="text-sm text-muted-foreground">Current Encounter</p>
             <p className="font-fantasy text-lg text-primary">{event.name}</p>
             <p
-              className={`text-sm font-semibold ${event.difficulty === "Hard" ? "text-red-500" : event.difficulty === "Medium" ? "text-yellow-500" : "text-green-500"}`}
+              className={`text-sm font-semibold ${
+                event.difficulty === "Hard"
+                  ? "text-red-500"
+                  : event.difficulty === "Medium"
+                  ? "text-yellow-500"
+                  : "text-green-500"
+              }`}
             >
               {event.difficulty}
             </p>
@@ -1109,22 +1278,33 @@ function AdventureScreen({
               <div className="mx-auto mb-4 p-6 bg-primary/20 rounded-full border-4 border-accent">
                 <div className="text-primary">{event.icon}</div>
               </div>
-              <CardTitle className="font-fantasy text-3xl text-primary glow-text">{event.name}</CardTitle>
+              <CardTitle className="font-fantasy text-3xl text-primary glow-text">
+                {event.name}
+              </CardTitle>
             </CardHeader>
             <CardContent className="text-center">
-              <p className="text-lg text-card-foreground mb-6 leading-relaxed">{event.description}</p>
+              <p className="text-lg text-card-foreground mb-6 leading-relaxed">
+                {event.description}
+              </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <Card className="bg-secondary/10 border border-secondary">
                   <CardHeader>
-                    <CardTitle className="text-lg text-primary">Your Party</CardTitle>
+                    <CardTitle className="text-lg text-primary">
+                      Your Party
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
                       {party?.members.map((member) => (
-                        <div key={member.id} className="flex items-center justify-between text-sm">
+                        <div
+                          key={member.id}
+                          className="flex items-center justify-between text-sm"
+                        >
                           <span className="font-semibold">{member.name}</span>
-                          <span className="text-muted-foreground">{member.class}</span>
+                          <span className="text-muted-foreground">
+                            {member.class}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -1133,25 +1313,37 @@ function AdventureScreen({
 
                 <Card className="bg-accent/10 border border-accent">
                   <CardHeader>
-                    <CardTitle className="text-lg text-primary">Encounter Details</CardTitle>
+                    <CardTitle className="text-lg text-primary">
+                      Encounter Details
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span>Difficulty:</span>
                         <span
-                          className={`font-semibold ${event.difficulty === "Hard" ? "text-red-500" : event.difficulty === "Medium" ? "text-yellow-500" : "text-green-500"}`}
+                          className={`font-semibold ${
+                            event.difficulty === "Hard"
+                              ? "text-red-500"
+                              : event.difficulty === "Medium"
+                              ? "text-yellow-500"
+                              : "text-green-500"
+                          }`}
                         >
                           {event.difficulty}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span>Party Size:</span>
-                        <span className="font-semibold">{party?.members.length} heroes</span>
+                        <span className="font-semibold">
+                          {party?.members.length} heroes
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span>Enemy:</span>
-                        <span className="font-semibold text-primary">{getEnemyName(event.name)}</span>
+                        <span className="font-semibold text-primary">
+                          {getEnemyName(event.name)}
+                        </span>
                       </div>
                     </div>
                   </CardContent>
@@ -1160,8 +1352,13 @@ function AdventureScreen({
 
               <div className="space-y-4">
                 <div className="max-w-md mx-auto">
-                  <Label className="text-sm font-semibold mb-2 block">Current Turn Character</Label>
-                  <Select value={currentTurnCharacter} onValueChange={setCurrentTurnCharacter}>
+                  <Label className="text-sm font-semibold mb-2 block">
+                    Current Turn Character
+                  </Label>
+                  <Select
+                    value={currentTurnCharacter}
+                    onValueChange={setCurrentTurnCharacter}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select character for current turn" />
                     </SelectTrigger>
@@ -1192,7 +1389,9 @@ function AdventureScreen({
                     </>
                   )}
                 </Button>
-                <p className="text-sm text-muted-foreground">Analyze your party's best strategy for this encounter</p>
+                <p className="text-sm text-muted-foreground">
+                  Analyze your party's best strategy for this encounter
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -1208,7 +1407,9 @@ function AdventureScreen({
               <CardContent className="space-y-6">
                 {/* Overall Success Rate */}
                 <div className="text-center">
-                  <h3 className="text-xl font-semibold mb-2">Party Success Chance</h3>
+                  <h3 className="text-xl font-semibold mb-2">
+                    Party Success Chance
+                  </h3>
                   <div
                     className="text-4xl font-bold mb-2"
                     style={{
@@ -1216,13 +1417,16 @@ function AdventureScreen({
                         analysisResult.party_success_chance >= 70
                           ? "#22c55e"
                           : analysisResult.party_success_chance >= 40
-                            ? "#eab308"
-                            : "#ef4444",
+                          ? "#eab308"
+                          : "#ef4444",
                     }}
                   >
                     {analysisResult.party_success_chance}%
                   </div>
-                  <Progress value={analysisResult.party_success_chance} className="w-full max-w-md mx-auto h-3" />
+                  <Progress
+                    value={analysisResult.party_success_chance}
+                    className="w-full max-w-md mx-auto h-3"
+                  />
                   <p className="text-sm text-muted-foreground mt-2">
                     Encounter Difficulty: {analysisResult.encounter_difficulty}
                   </p>
@@ -1230,40 +1434,57 @@ function AdventureScreen({
 
                 {/* Individual Character Success Rates - Bar Chart */}
                 <div>
-                  <h3 className="text-lg font-semibold mb-4 text-center">Individual Success Rates</h3>
+                  <h3 className="text-lg font-semibold mb-4 text-center">
+                    Individual Success Rates
+                  </h3>
                   <div className="space-y-3">
-                    {analysisResult.individual_success_rates.map((char: any, index: number) => (
-                      <div key={index} className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="font-semibold">{char.character}</span>
-                          <span className={`font-bold ${getSuccessColor(char.success_rate)}`}>
-                            {char.success_rate}%
-                          </span>
-                        </div>
-                        <div className="relative">
-                          <Progress value={char.success_rate} className="h-6" />
-                          <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white">
-                            {char.recommended_action}
+                    {analysisResult.individual_success_rates.map(
+                      (char: any, index: number) => (
+                        <div key={index} className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="font-semibold">
+                              {char.character}
+                            </span>
+                            <span
+                              className={`font-bold ${getSuccessColor(
+                                char.success_rate
+                              )}`}
+                            >
+                              {char.success_rate}%
+                            </span>
+                          </div>
+                          <div className="relative">
+                            <Progress
+                              value={char.success_rate}
+                              className="h-6"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white">
+                              {char.recommended_action}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    )}
                   </div>
                 </div>
 
                 {/* Strategic Recommendations */}
                 <div>
-                  <h3 className="text-lg font-semibold mb-3">Strategic Recommendations</h3>
+                  <h3 className="text-lg font-semibold mb-3">
+                    Strategic Recommendations
+                  </h3>
                   <div className="space-y-2">
-                    {analysisResult.strategic_recommendations.map((rec: string, index: number) => (
-                      <div
-                        key={index}
-                        className="flex items-start gap-2 p-3 bg-accent/10 rounded-lg border border-accent/20"
-                      >
-                        <div className="w-2 h-2 bg-accent rounded-full mt-2 flex-shrink-0" />
-                        <p className="text-sm">{rec}</p>
-                      </div>
-                    ))}
+                    {analysisResult.strategic_recommendations.map(
+                      (rec: string, index: number) => (
+                        <div
+                          key={index}
+                          className="flex items-start gap-2 p-3 bg-accent/10 rounded-lg border border-accent/20"
+                        >
+                          <div className="w-2 h-2 bg-accent rounded-full mt-2 flex-shrink-0" />
+                          <p className="text-sm">{rec}</p>
+                        </div>
+                      )
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -1272,5 +1493,5 @@ function AdventureScreen({
         </div>
       </div>
     </div>
-  )
+  );
 }
