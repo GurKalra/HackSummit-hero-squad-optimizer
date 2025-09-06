@@ -190,9 +190,9 @@ export default function HomePage() {
               Dungeons & Dragons Guide
             </DialogTitle>
           </DialogHeader>
-          {/* --- THIS IS THE FIX --- */}
-          {/* The informational text has been added here. */}
-          <div className="space-y-4 text-card-foreground leading-relaxed">
+
+          {/* --- FIX: Added classes here for scrolling on smaller screens --- */}
+          <div className="space-y-4 text-card-foreground leading-relaxed max-h-[70vh] overflow-y-auto pr-6">
             <p>
               Dungeons & Dragons (D&D) is a tabletop role-playing game where
               players create characters and embark on adventures guided by a
@@ -248,7 +248,6 @@ export default function HomePage() {
               </p>
             </div>
           </div>
-          {/* --- END OF FIX --- */}
         </DialogContent>
       </Dialog>
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-8">
@@ -661,9 +660,6 @@ function PartySection({
     </div>
   );
 }
-
-// ... The EventsSection and AdventureScreen components remain unchanged ...
-// They are included here for completeness of the file.
 
 function EventsSection({
   onBack,
