@@ -173,3 +173,24 @@
 .spin-3d {
   animation: spin3d 2s ease-out;
 }
+
+@keyframes sweep-across {
+  0% {
+    left: -2rem; /* Start off-screen left */
+    opacity: 0.8;
+    transform: rotate(-45deg);
+  }
+  50% {
+    opacity: 1;
+    transform: rotate(20deg);
+  }
+  100% {
+    left: 100%; /* End off-screen right */
+    opacity: 0;
+    transform: rotate(45deg);
+  }
+}
+
+.animate-sweep {
+  animation: sweep-across 1.5s ease-in-out forwards;
+}

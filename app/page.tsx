@@ -1,7 +1,8 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
+// --- MUSIC: Import useRef ---
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -39,8 +40,10 @@ import {
   Loader2,
   TrendingUp,
   Edit,
+  Wand2,
 } from "lucide-react";
 
+// --- CLIENT-SIDE INTERFACES ---
 type CharacterClass = "Mage" | "Barbarian" | "Rogue" | "Bandit";
 
 interface Character {
@@ -124,6 +127,27 @@ const getDifficultyColor = (
   }
 };
 
+const D20Icon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="M12 2L2 8.5V15.5L12 22L22 15.5V8.5L12 2Z" />
+    <path d="M2 8.5L12 12L22 8.5" />
+    <path d="M12 2V12" />
+    <path d="M2 15.5L7 13.75" />
+    <path d="M22 15.5L17 13.75" />
+    <path d="M12 22L7 19.25" />
+    <path d="M12 22L17 19.25" />
+  </svg>
+);
+
 export default function HomePage() {
   const [diceValue, setDiceValue] = useState<number | null>(null);
   const [isSpinning, setIsSpinning] = useState(false);
@@ -132,18 +156,41 @@ export default function HomePage() {
     "home" | "party" | "events"
   >("home");
   const [party, setParty] = useState<Party | null>(null);
+  const [isRevealing, setIsRevealing] = useState(false);
+
+  // --- MUSIC: Create a ref for the audio element ---
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   const rollDice = () => {
+    if (isSpinning || isRevealing) return;
+
     setIsSpinning(true);
     setDiceValue(null);
+
     setTimeout(() => {
-      const roll = Math.floor(Math.random() * 20) + 1;
-      setDiceValue(roll);
       setIsSpinning(false);
+      setIsRevealing(true);
+
+      setTimeout(() => {
+        const roll = Math.floor(Math.random() * 20) + 1;
+        setDiceValue(roll);
+        setIsRevealing(false);
+      }, 1500);
     }, 2000);
   };
 
-  const toggleMusic = () => setMusicPlaying(!musicPlaying);
+  // --- MUSIC: Update the toggleMusic function to control playback ---
+  const toggleMusic = () => {
+    const newMusicPlaying = !musicPlaying;
+    setMusicPlaying(newMusicPlaying);
+    if (audioRef.current) {
+      if (newMusicPlaying) {
+        audioRef.current.play();
+      } else {
+        audioRef.current.pause();
+      }
+    }
+  };
 
   if (currentSection === "party") {
     return (
@@ -162,6 +209,9 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
+      {/* --- MUSIC: Add the audio element here --- */}
+      <audio ref={audioRef} src="/music/fantasy-theme.mp3" loop />
+
       <div className="absolute inset-0 opacity-10 bg-[url('/medieval-parchment-texture-with-faint-castle-illus.jpg')] bg-cover bg-center" />
       <Button
         onClick={toggleMusic}
@@ -191,7 +241,6 @@ export default function HomePage() {
             </DialogTitle>
           </DialogHeader>
 
-          {/* --- FIX: Added classes here for scrolling on smaller screens --- */}
           <div className="space-y-4 text-card-foreground leading-relaxed max-h-[70vh] overflow-y-auto pr-6">
             <p>
               Dungeons & Dragons (D&D) is a tabletop role-playing game where
@@ -254,7 +303,39 @@ export default function HomePage() {
         <h1 className="font-fantasy text-6xl md:text-8xl font-bold text-primary mb-8 text-center glow-text">
           Hero Squad Optimizer
         </h1>
-        <div className="mb-12">{/* ... */}</div>
+        <div className="mb-12 text-center h-16 flex items-center justify-center">
+          <div
+            onClick={rollDice}
+            className="relative overflow-hidden inline-flex items-center justify-center p-4 rounded-lg bg-card/50 hover:bg-card/80 cursor-pointer transition-all duration-300 border-2 border-transparent hover:border-accent shadow-lg min-w-[300px] h-full"
+          >
+            {isSpinning ? (
+              <div className="flex items-center gap-3 text-secondary-foreground">
+                <D20Icon className="h-6 w-6 animate-spin text-primary" />
+                <span className="font-semibold text-lg">
+                  Deciding your fate...
+                </span>
+              </div>
+            ) : isRevealing ? (
+              <>
+                <Wand2 className="h-8 w-8 text-primary absolute animate-sweep" />
+                <span className="font-semibold text-lg text-secondary-foreground/50">
+                  Revealing...
+                </span>
+              </>
+            ) : diceValue !== null ? (
+              <p className="font-fantasy text-2xl text-primary animate-in fade-in zoom-in-50 duration-500">
+                Fate has decided: {diceValue}
+              </p>
+            ) : (
+              <div className="flex items-center gap-3 text-secondary-foreground">
+                <D20Icon className="h-6 w-6" />
+                <span className="font-semibold text-lg">
+                  Click to discover your fate
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
         <div className="flex flex-col sm:flex-row gap-6">
           <Button
             onClick={() => setCurrentSection("party")}
@@ -274,6 +355,7 @@ export default function HomePage() {
   );
 }
 
+// ... (PartySection and EventsSection components remain the same) ...
 function PartySection({
   onBack,
   party,
@@ -830,44 +912,35 @@ function AdventureScreen({
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [currentTurnCharacter, setCurrentTurnCharacter] = useState<string>("");
 
-  const handleOptimizeActions = async () => {
+  const handleOptimizeActions = () => {
     if (!party || party.members.length === 0) return;
     setIsAnalyzing(true);
-    try {
-      const requestData = {
-        party: party.members.map((member) => ({
-          name: member.name,
-          type: member.class,
-          strength: member.strength,
-          agility: member.agility,
-          health: member.health,
-          mana: member.mana,
-          dexterity: member.dexterity,
-          wisdom: member.wisdom,
-        })),
-        encounter: {
-          event_type: event.name,
-          enemy: {
-            name: getEnemyName(event.name),
-            health: getEnemyHealth(event.name),
-          },
-        },
-        current_turn_character: currentTurnCharacter || party.members[0].name,
-      };
-      const response = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestData),
-      });
-      if (!response.ok) throw new Error("Failed to analyze party");
-      const result = await response.json();
-      setAnalysisResult(result.analysis);
-    } catch (error) {
-      console.error("Error analyzing party:", error);
-      alert("Failed to analyze party. Please try again.");
-    } finally {
+    setAnalysisResult(null);
+
+    const encounterData: Encounter = {
+      event_type: event.name,
+      enemy: {
+        name: getEnemyName(event.name),
+        health: getEnemyHealth(event.name),
+      },
+    };
+
+    const partyData: AnalysisCharacter[] = party.members.map((member) => ({
+      name: member.name,
+      type: member.class,
+      strength: member.strength,
+      agility: member.agility,
+      health: member.health,
+      mana: member.mana,
+      dexterity: member.dexterity,
+      wisdom: member.wisdom,
+    }));
+
+    setTimeout(() => {
+      const result = analyzePartyVsEncounter(partyData, encounterData);
+      setAnalysisResult(result);
       setIsAnalyzing(false);
-    }
+    }, 1500);
   };
 
   const getEnemyName = (eventName: EventType): string => {
@@ -1179,3 +1252,366 @@ function AdventureScreen({
     </div>
   );
 }
+
+// --- START OF INTEGRATED ANALYSIS LOGIC ---
+// This entire section was moved from the API route into the client-side page.
+
+// --- INTERFACES FOR ANALYSIS LOGIC ---
+interface AnalysisCharacter {
+  name: string;
+  type: string;
+  strength: number;
+  agility: number;
+  health: number;
+  mana?: number;
+  dexterity?: number;
+  wisdom?: number;
+}
+interface Enemy {
+  name: string;
+  health: number;
+}
+interface Encounter {
+  event_type: string;
+  enemy: Enemy;
+}
+
+// --- CONTEXTUAL MONTE CARLO SIMULATION ---
+function simulateSingleEncounter(
+  party: AnalysisCharacter[],
+  encounter: Encounter
+): boolean {
+  switch (encounter.event_type) {
+    case "Mystic Puzzle": {
+      const totalWisdom = party.reduce(
+        (sum, char) => sum + (char.wisdom || 0),
+        0
+      );
+      const totalMana = party.reduce((sum, char) => sum + (char.mana || 0), 0);
+      const avgIntellect = (totalWisdom + totalMana) / (party.length * 2);
+      const successChance = Math.min(0.95, avgIntellect / 25);
+      return Math.random() < successChance;
+    }
+
+    case "Ancient Trap": {
+      const totalDexterity = party.reduce(
+        (sum, char) => sum + (char.dexterity || 0),
+        0
+      );
+      const totalAgility = party.reduce(
+        (sum, char) => sum + (char.agility || 0),
+        0
+      );
+      const avgFinesse = (totalDexterity + totalAgility) / (party.length * 2);
+      const successChance = Math.min(0.95, avgFinesse / 28);
+      return Math.random() < successChance;
+    }
+
+    case "Dragon Fight":
+    default: {
+      let enemyHealth = encounter.enemy.health;
+      let partyHealth = party.map((p) => p.health);
+      const weights = getStatWeights(encounter.event_type);
+
+      for (let round = 0; round < 50; round++) {
+        party.forEach((character, index) => {
+          if (partyHealth[index] <= 0) return;
+
+          const effectiveness =
+            (character.strength * weights.strength +
+              character.agility * weights.agility +
+              (character.dexterity || 0) * weights.dexterity +
+              (character.mana || 0) * weights.mana +
+              (character.wisdom || 0) * weights.wisdom) /
+            (weights.strength +
+              weights.agility +
+              weights.dexterity +
+              weights.mana +
+              weights.wisdom);
+
+          const successChance = Math.min(0.95, 0.2 + effectiveness / 25);
+          if (Math.random() < successChance) {
+            const damage = Math.floor(5 + Math.random() * (effectiveness / 2));
+            enemyHealth -= damage;
+            if (enemyHealth <= 0) return;
+          }
+        });
+
+        if (enemyHealth <= 0) return true;
+
+        const activePartyMembers = partyHealth
+          .map((h, i) => (h > 0 ? i : -1))
+          .filter((i) => i !== -1);
+        if (activePartyMembers.length === 0) return false;
+
+        const targetIndex =
+          activePartyMembers[
+            Math.floor(Math.random() * activePartyMembers.length)
+          ];
+        const enemyDamage = Math.floor(
+          5 + (encounter.enemy.health / 20) * Math.random()
+        );
+        partyHealth[targetIndex] -= enemyDamage;
+
+        if (partyHealth.every((h) => h <= 0)) return false;
+      }
+      return enemyHealth <= 0;
+    }
+  }
+}
+
+function runMonteCarloSimulation(
+  party: AnalysisCharacter[],
+  encounter: Encounter
+): number {
+  const NUM_TRIALS = 1000;
+  let wins = 0;
+  for (let i = 0; i < NUM_TRIALS; i++) {
+    if (simulateSingleEncounter(party, encounter)) {
+      wins++;
+    }
+  }
+  return Math.round((wins / NUM_TRIALS) * 100);
+}
+
+// --- HYBRID ANALYSIS CONTROLLER ---
+function analyzePartyVsEncounter(
+  party: AnalysisCharacter[],
+  encounter: Encounter
+) {
+  const partySuccessChance = runMonteCarloSimulation(party, encounter);
+  const weightedAnalysis = getWeightedAnalysis(
+    party,
+    encounter,
+    partySuccessChance
+  );
+
+  return {
+    party_success_chance: partySuccessChance,
+    individual_success_rates: weightedAnalysis.individual_success_rates,
+    encounter_difficulty: getEncounterDifficulty(encounter.event_type),
+    strategic_recommendations: weightedAnalysis.strategic_recommendations,
+  };
+}
+
+// --- GRANULAR WEIGHTING ALGORITHM & HELPERS ---
+interface StatWeights {
+  strength: number;
+  agility: number;
+  health: number;
+  mana: number;
+  dexterity: number;
+  wisdom: number;
+}
+
+function getStatWeights(eventType: string): StatWeights {
+  switch (eventType) {
+    case "Dragon Fight":
+      return {
+        strength: 1.3,
+        health: 1.2,
+        agility: 1.1,
+        mana: 1.1,
+        dexterity: 1.0,
+        wisdom: 0.9,
+      };
+    case "Ancient Trap":
+      return {
+        dexterity: 1.4,
+        agility: 1.3,
+        wisdom: 1.2,
+        health: 1.0,
+        mana: 0.9,
+        strength: 0.8,
+      };
+    case "Mystic Puzzle":
+      return {
+        wisdom: 1.5,
+        mana: 1.3,
+        dexterity: 1.0,
+        agility: 0.9,
+        health: 0.8,
+        strength: 0.7,
+      };
+    default:
+      return {
+        strength: 1.0,
+        agility: 1.0,
+        health: 1.0,
+        mana: 1.0,
+        dexterity: 1.0,
+        wisdom: 1.0,
+      };
+  }
+}
+
+function getWeightedAnalysis(
+  party: AnalysisCharacter[],
+  encounter: Encounter,
+  partySuccessChance: number
+) {
+  const weights = getStatWeights(encounter.event_type);
+  const totalWeight = Object.values(weights).reduce(
+    (sum, weight) => sum + weight,
+    0
+  );
+  const difficultyMultiplier = getDifficultyMultiplier(encounter.event_type);
+
+  const individualRates = party.map((character) => {
+    const charTotalWeighted =
+      character.strength * weights.strength +
+      character.agility * weights.agility +
+      character.health * weights.health +
+      (character.mana || 0) * weights.mana +
+      (character.dexterity || 0) * weights.dexterity +
+      (character.wisdom || 0) * weights.wisdom;
+
+    const charBaseRate = charTotalWeighted / (totalWeight * 15);
+    const charSuccessRate = Math.min(
+      95,
+      Math.max(15, 20 + charBaseRate * 75 * difficultyMultiplier)
+    );
+
+    return {
+      character: character.name,
+      success_rate: Math.round(charSuccessRate),
+      recommended_action: getRecommendedAction(character, encounter.event_type),
+    };
+  });
+
+  const recommendations = generateRecommendations(
+    party,
+    encounter,
+    partySuccessChance
+  );
+
+  return {
+    individual_success_rates: individualRates,
+    strategic_recommendations: recommendations,
+  };
+}
+
+function getDifficultyMultiplier(eventType: string): number {
+  switch (eventType) {
+    case "Dragon Fight":
+      return 0.85;
+    case "Ancient Trap":
+      return 0.9;
+    case "Mystic Puzzle":
+      return 1.0;
+    default:
+      return 0.95;
+  }
+}
+
+function getEncounterDifficulty(eventType: string): string {
+  switch (eventType) {
+    case "Dragon Fight":
+      return "Hard";
+    case "Ancient Trap":
+      return "Medium";
+    case "Mystic Puzzle":
+      return "Easy";
+    default:
+      return "Unknown";
+  }
+}
+
+function getRecommendedAction(
+  character: AnalysisCharacter,
+  eventType: string
+): string {
+  const stats = {
+    str: character.strength,
+    agi: character.agility,
+    dex: character.dexterity || 0,
+    wis: character.wisdom || 0,
+    mana: character.mana || 0,
+  };
+
+  switch (eventType) {
+    case "Dragon Fight":
+      if (stats.str > 15) return "Power Attack";
+      if (stats.mana > 15) return "Cast Fireball";
+      if (stats.agi > 15) return "Dodge and Weave";
+      return "Defensive Stance";
+    case "Ancient Trap":
+      if (stats.dex > 15) return "Disarm Trap";
+      if (stats.wis > 15) return "Analyze Mechanism";
+      if (stats.agi > 15) return "Evade Pressure Plate";
+      return "Provide Lookout";
+    case "Mystic Puzzle":
+      if (stats.wis > 15) return "Decipher Runes";
+      if (stats.mana > 15) return "Channel Insight";
+      if (stats.dex > 10) return "Manipulate Artifact";
+      return "Observe Patterns";
+    default:
+      return "Take Action";
+  }
+}
+
+function generateRecommendations(
+  party: AnalysisCharacter[],
+  encounter: Encounter,
+  successChance: number
+): string[] {
+  const recs: string[] = [];
+  const findBest = (stat: keyof Omit<AnalysisCharacter, "name" | "type">) =>
+    party.reduce((best, char) =>
+      (char[stat] || 0) > (best[stat] || 0) ? char : best
+    );
+
+  if (successChance < 40) {
+    recs.push(
+      "This is a highly challenging encounter. Survival should be the top priority; focus on defensive abilities and healing."
+    );
+  } else if (successChance > 75) {
+    recs.push(
+      "Your party has a clear advantage. A coordinated, aggressive strategy should secure a swift victory."
+    );
+  } else {
+    recs.push(
+      "The odds are balanced. A smart, tactical approach combining offense and defense is crucial for success."
+    );
+  }
+
+  switch (encounter.event_type) {
+    case "Dragon Fight":
+      const tank = findBest("health");
+      recs.push(
+        `Let ${tank.name} draw the dragon's attention while others attack from the flanks.`
+      );
+      const strongest = findBest("strength");
+      recs.push(
+        `${strongest.name} should focus on dealing maximum physical damage.`
+      );
+      break;
+    case "Ancient Trap":
+      const nimble = findBest("dexterity");
+      recs.push(
+        `${nimble.name} should take the lead to scout for and disarm any traps.`
+      );
+      const wiseTrap = findBest("wisdom");
+      if (wiseTrap.name !== nimble.name) {
+        recs.push(
+          `${wiseTrap.name} can assist by spotting the trap mechanisms from a distance.`
+        );
+      }
+      break;
+    case "Mystic Puzzle":
+      const wise = findBest("wisdom");
+      recs.push(
+        `The party should rely on ${wise.name}'s wisdom to solve the core puzzle.`
+      );
+      const mage = findBest("mana");
+      if (mage.name !== wise.name) {
+        recs.push(
+          `${mage.name} could use their mana to reveal hidden clues or magical auras.`
+        );
+      }
+      break;
+  }
+  return recs;
+}
+
+// --- END OF INTEGRATED ANALYSIS LOGIC ---

@@ -26,34 +26,22 @@ interface AnalyzeRequest {
   encounter: Encounter;
   current_turn_character: string;
 }
-interface AnalyzeResponse {
-  success: boolean;
-  analysis: any;
-}
 
 // --- API ROUTE HANDLER ---
 export async function POST(request: NextRequest) {
   try {
     const body: AnalyzeRequest = await request.json();
 
-    if (!body.party || !body.encounter || !body.current_turn_character) {
+    if (!body.party || !body.encounter) {
       return NextResponse.json(
-        {
-          error:
-            "Missing required fields: party, encounter, current_turn_character",
-        },
+        { error: "Missing required fields: party, encounter" },
         { status: 400 }
       );
     }
 
-    const analysis = analyzePartyVsEncounter(
-      body.party,
-      body.encounter,
-      body.current_turn_character
-    );
+    const analysis = analyzePartyVsEncounter(body.party, body.encounter);
 
-    const response: AnalyzeResponse = { success: true, analysis };
-    return NextResponse.json(response);
+    return NextResponse.json({ success: true, analysis });
   } catch (error) {
     console.error("Error analyzing party:", error);
     return NextResponse.json(
@@ -63,7 +51,128 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// --- RE-TUNED GRANULAR WEIGHTING ALGORITHM ---
+// --- CONTEXTUAL MONTE CARLO SIMULATION ---
+
+/**
+ * Runs a single, randomized trial of an encounter based on its type.
+ * @returns {boolean} - True if the party won, false otherwise.
+ */
+function simulateSingleEncounter(
+  party: Character[],
+  encounter: Encounter
+): boolean {
+  switch (encounter.event_type) {
+    case "Mystic Puzzle": {
+      const totalWisdom = party.reduce(
+        (sum, char) => sum + (char.wisdom || 0),
+        0
+      );
+      const totalMana = party.reduce((sum, char) => sum + (char.mana || 0), 0);
+      const avgIntellect = (totalWisdom + totalMana) / (party.length * 2);
+      const successChance = Math.min(0.95, avgIntellect / 25);
+      return Math.random() < successChance;
+    }
+
+    case "Ancient Trap": {
+      const totalDexterity = party.reduce(
+        (sum, char) => sum + (char.dexterity || 0),
+        0
+      );
+      const totalAgility = party.reduce(
+        (sum, char) => sum + (char.agility || 0),
+        0
+      );
+      const avgFinesse = (totalDexterity + totalAgility) / (party.length * 2);
+      // Rebalanced divisor from 30 to 28 for better results
+      const successChance = Math.min(0.95, avgFinesse / 28);
+      return Math.random() < successChance;
+    }
+
+    case "Dragon Fight":
+    default: {
+      let enemyHealth = encounter.enemy.health;
+      let partyHealth = party.map((p) => p.health);
+      const weights = getStatWeights(encounter.event_type);
+
+      for (let round = 0; round < 50; round++) {
+        party.forEach((character, index) => {
+          if (partyHealth[index] <= 0) return;
+
+          const effectiveness =
+            (character.strength * weights.strength +
+              character.agility * weights.agility +
+              (character.dexterity || 0) * weights.dexterity +
+              (character.mana || 0) * weights.mana +
+              (character.wisdom || 0) * weights.wisdom) /
+            (weights.strength +
+              weights.agility +
+              weights.dexterity +
+              weights.mana +
+              weights.wisdom);
+
+          const successChance = Math.min(0.95, 0.2 + effectiveness / 25);
+          if (Math.random() < successChance) {
+            const damage = Math.floor(5 + Math.random() * (effectiveness / 2));
+            enemyHealth -= damage;
+            if (enemyHealth <= 0) return;
+          }
+        });
+
+        if (enemyHealth <= 0) return true;
+
+        const activePartyMembers = partyHealth
+          .map((h, i) => (h > 0 ? i : -1))
+          .filter((i) => i !== -1);
+        if (activePartyMembers.length === 0) return false;
+
+        const targetIndex =
+          activePartyMembers[
+            Math.floor(Math.random() * activePartyMembers.length)
+          ];
+        const enemyDamage = Math.floor(
+          5 + (encounter.enemy.health / 20) * Math.random()
+        );
+        partyHealth[targetIndex] -= enemyDamage;
+
+        if (partyHealth.every((h) => h <= 0)) return false;
+      }
+      return enemyHealth <= 0;
+    }
+  }
+}
+
+function runMonteCarloSimulation(
+  party: Character[],
+  encounter: Encounter
+): number {
+  const NUM_TRIALS = 1000;
+  let wins = 0;
+  for (let i = 0; i < NUM_TRIALS; i++) {
+    if (simulateSingleEncounter(party, encounter)) {
+      wins++;
+    }
+  }
+  return Math.round((wins / NUM_TRIALS) * 100);
+}
+
+// --- HYBRID ANALYSIS CONTROLLER ---
+function analyzePartyVsEncounter(party: Character[], encounter: Encounter) {
+  const partySuccessChance = runMonteCarloSimulation(party, encounter);
+  const weightedAnalysis = getWeightedAnalysis(
+    party,
+    encounter,
+    partySuccessChance
+  );
+
+  return {
+    party_success_chance: partySuccessChance,
+    individual_success_rates: weightedAnalysis.individual_success_rates,
+    encounter_difficulty: getEncounterDifficulty(encounter.event_type),
+    strategic_recommendations: weightedAnalysis.strategic_recommendations,
+  };
+}
+
+// --- GRANULAR WEIGHTING ALGORITHM & HELPERS ---
 
 interface StatWeights {
   strength: number;
@@ -115,37 +224,17 @@ function getStatWeights(eventType: string): StatWeights {
   }
 }
 
-function analyzePartyVsEncounter(
+function getWeightedAnalysis(
   party: Character[],
   encounter: Encounter,
-  currentCharacter: string
+  partySuccessChance: number
 ) {
   const weights = getStatWeights(encounter.event_type);
   const totalWeight = Object.values(weights).reduce(
     (sum, weight) => sum + weight,
     0
   );
-
-  const totalWeightedPower = party.reduce((partySum, char) => {
-    const charPower =
-      char.strength * weights.strength +
-      char.agility * weights.agility +
-      char.health * weights.health +
-      (char.mana || 0) * weights.mana +
-      (char.dexterity || 0) * weights.dexterity +
-      (char.wisdom || 0) * weights.wisdom;
-    return partySum + charPower;
-  }, 0);
-
-  const partySize = party.length;
-  // --- FIX #1 --- Changed the normalization from 40 to 20 to be less punishing.
-  const baseSuccessRate = Math.min(
-    95,
-    Math.max(15, (totalWeightedPower / (partySize * totalWeight * 20)) * 100)
-  );
-
   const difficultyMultiplier = getDifficultyMultiplier(encounter.event_type);
-  const partySuccessChance = Math.round(baseSuccessRate * difficultyMultiplier);
 
   const individualRates = party.map((character) => {
     const charTotalWeighted =
@@ -156,9 +245,7 @@ function analyzePartyVsEncounter(
       (character.dexterity || 0) * weights.dexterity +
       (character.wisdom || 0) * weights.wisdom;
 
-    // --- FIX #2 --- Changed the normalization from 25 to 15 for a more rewarding individual score.
     const charBaseRate = charTotalWeighted / (totalWeight * 15);
-
     const charSuccessRate = Math.min(
       95,
       Math.max(15, 20 + charBaseRate * 75 * difficultyMultiplier)
@@ -167,6 +254,7 @@ function analyzePartyVsEncounter(
     return {
       character: character.name,
       success_rate: Math.round(charSuccessRate),
+      // FIX: Correctly pass encounter.event_type
       recommended_action: getRecommendedAction(character, encounter.event_type),
     };
   });
@@ -178,9 +266,7 @@ function analyzePartyVsEncounter(
   );
 
   return {
-    party_success_chance: partySuccessChance,
     individual_success_rates: individualRates,
-    encounter_difficulty: getEncounterDifficulty(encounter.event_type),
     strategic_recommendations: recommendations,
   };
 }
@@ -247,6 +333,7 @@ function generateRecommendations(
   successChance: number
 ): string[] {
   const recs: string[] = [];
+  // FIX: Corrected the typing for the 'stat' parameter to match the local Character interface.
   const findBest = (stat: keyof Omit<Character, "name" | "type">) =>
     party.reduce((best, char) =>
       (char[stat] || 0) > (best[stat] || 0) ? char : best
@@ -254,15 +341,15 @@ function generateRecommendations(
 
   if (successChance < 40) {
     recs.push(
-      "This will be a tough encounter. Focus on defensive maneuvers and support."
+      "This is a highly challenging encounter. Survival should be the top priority; focus on defensive abilities and healing."
     );
   } else if (successChance > 75) {
     recs.push(
-      "Your party is well-suited for this challenge. Press the advantage with aggressive tactics."
+      "Your party has a clear advantage. A coordinated, aggressive strategy should secure a swift victory."
     );
   } else {
     recs.push(
-      "A balanced approach is best. Coordinate your strengths to overcome the challenge."
+      "The odds are balanced. A smart, tactical approach combining offense and defense is crucial for success."
     );
   }
 
