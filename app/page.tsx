@@ -103,68 +103,85 @@ export default function HomePage() {
         {musicPlaying ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
       </Button>
 
-      {/* Learn D&D Modal - Bottom Right */}
-      <Dialog>
-        <DialogTrigger asChild>
-          <Button
-            className="fixed bottom-6 right-6 z-50 bg-accent hover:bg-accent/80 text-accent-foreground rounded-full p-2"
-            size="sm"
-          >
-            <HelpCircle className="h-4 w-4 mr-1" />
-            Learn D&D
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="max-w-2xl bg-card border-2 border-border">
-          <DialogHeader>
-            <DialogTitle className="font-fantasy text-2xl text-primary glow-text">Dungeons & Dragons Guide</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 text-card-foreground">
-            <p className="text-lg">
-              Dungeons & Dragons (D&D) is a tabletop role-playing game where players create characters and embark on
-              adventures guided by a Dungeon Master (DM). It's a game of imagination, strategy, and collaborative
-              storytelling.
-            </p>
+     {/* Learn D&D Modal - Bottom Right */}
+<Dialog>
+  <DialogTrigger asChild>
+    <Button
+      className="fixed bottom-6 right-6 z-50 bg-accent hover:bg-accent/80 text-accent-foreground 
+                 rounded-full px-4 py-2 flex items-center gap-2 whitespace-nowrap shadow-lg"
+      size="sm"
+    >
+      <HelpCircle className="h-4 w-4" />
+      <span className="hidden sm:inline">Learn D&D</span>
+    </Button>
+  </DialogTrigger>
 
-            <div>
-              <h3 className="font-fantasy text-xl text-primary mb-2">Core Concepts</h3>
-              <ul className="list-disc list-inside space-y-1">
-                <li>
-                  <strong>Characters:</strong> Players create heroes with unique abilities, backgrounds, and
-                  personalities
-                </li>
-                <li>
-                  <strong>Classes:</strong> Different character types like Warriors, Mages, Rogues, and Clerics
-                </li>
-                <li>
-                  <strong>Stats:</strong> Numerical values representing character abilities (Strength, Agility, Health,
-                  etc.)
-                </li>
-                <li>
-                  <strong>Encounters:</strong> Challenges and battles that test the party's skills and teamwork
-                </li>
-              </ul>
-            </div>
+  <DialogContent
+    className="max-w-2xl w-[95%] sm:w-full bg-card border-2 border-border 
+               sm:rounded-lg rounded-none sm:mx-0 mx-2 max-h-[90vh] flex flex-col"
+  >
+    <DialogHeader>
+      <DialogTitle className="font-fantasy text-2xl text-primary glow-text">
+        Dungeons & Dragons Guide
+      </DialogTitle>
+    </DialogHeader>
 
-            <div>
-              <h3 className="font-fantasy text-xl text-primary mb-2">How It Works</h3>
-              <p>
-                Players work together as a party to overcome obstacles, solve puzzles, and defeat enemies. The game uses
-                dice rolls to determine the success of actions, adding an element of chance and excitement to every
-                decision.
-              </p>
-            </div>
+    {/* Scrollable body */}
+    <div className="space-y-4 text-card-foreground overflow-y-auto pr-2 flex-1">
+      <p className="text-lg">
+        Dungeons & Dragons (D&D) is a tabletop role-playing game where players
+        create characters and embark on adventures guided by a Dungeon Master
+        (DM). It's a game of imagination, strategy, and collaborative
+        storytelling.
+      </p>
 
-            <div>
-              <h3 className="font-fantasy text-xl text-primary mb-2">Why Use an Optimizer?</h3>
-              <p>
-                The Hero Squad Optimizer helps players make strategic decisions during combat encounters. By analyzing
-                party composition, enemy threats, and character abilities, it suggests the most effective actions to
-                maximize your chances of success.
-              </p>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <div>
+        <h3 className="font-fantasy text-xl text-primary mb-2">Core Concepts</h3>
+        <ul className="list-disc list-inside space-y-1">
+          <li>
+            <strong>Characters:</strong> Players create heroes with unique
+            abilities, backgrounds, and personalities
+          </li>
+          <li>
+            <strong>Classes:</strong> Different character types like Warriors,
+            Mages, Rogues, and Clerics
+          </li>
+          <li>
+            <strong>Stats:</strong> Numerical values representing character
+            abilities (Strength, Agility, Health, etc.)
+          </li>
+          <li>
+            <strong>Encounters:</strong> Challenges and battles that test the
+            party's skills and teamwork
+          </li>
+        </ul>
+      </div>
+
+      <div>
+        <h3 className="font-fantasy text-xl text-primary mb-2">How It Works</h3>
+        <p>
+          Players work together as a party to overcome obstacles, solve puzzles,
+          and defeat enemies. The game uses dice rolls to determine the success
+          of actions, adding an element of chance and excitement to every
+          decision.
+        </p>
+      </div>
+
+      <div>
+        <h3 className="font-fantasy text-xl text-primary mb-2">
+          Why Use an Optimizer?
+        </h3>
+        <p>
+          The Hero Squad Optimizer helps players make strategic decisions during
+          combat encounters. By analyzing party composition, enemy threats, and
+          character abilities, it suggests the most effective actions to
+          maximize your chances of success.
+        </p>
+      </div>
+    </div>
+  </DialogContent>
+</Dialog>
+
 
       {/* Main Content */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-8">
