@@ -190,7 +190,65 @@ export default function HomePage() {
               Dungeons & Dragons Guide
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 text-card-foreground">{/* ... */}</div>
+          {/* --- THIS IS THE FIX --- */}
+          {/* The informational text has been added here. */}
+          <div className="space-y-4 text-card-foreground leading-relaxed">
+            <p>
+              Dungeons & Dragons (D&D) is a tabletop role-playing game where
+              players create characters and embark on adventures guided by a
+              Dungeon Master (DM). It's a game of imagination, strategy, and
+              collaborative storytelling.
+            </p>
+
+            <div>
+              <h3 className="font-fantasy text-lg text-primary mb-2">
+                Core Concepts
+              </h3>
+              <ul className="list-disc list-inside space-y-1 pl-2">
+                <li>
+                  <strong>Characters:</strong> Players create heroes with unique
+                  abilities, backgrounds, and personalities.
+                </li>
+                <li>
+                  <strong>Classes:</strong> Different character types like
+                  Warriors, Mages, Rogues, and Clerics.
+                </li>
+                <li>
+                  <strong>Stats:</strong> Numerical values representing
+                  character abilities (Strength, Agility, Health, etc.).
+                </li>
+                <li>
+                  <strong>Encounters:</strong> Challenges and battles that test
+                  the party's skills and teamwork.
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-fantasy text-lg text-primary mb-2">
+                How It Works
+              </h3>
+              <p>
+                Players work together as a party to overcome obstacles, solve
+                puzzles, and defeat enemies. The game uses dice rolls to
+                determine the success of actions, adding an element of chance
+                and excitement to every decision.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-fantasy text-lg text-primary mb-2">
+                Why Use an Optimizer?
+              </h3>
+              <p>
+                The Hero Squad Optimizer helps players make strategic decisions
+                during combat encounters. By analyzing party composition, enemy
+                threats, and character abilities, it suggests the most effective
+                actions to maximize your chances of success.
+              </p>
+            </div>
+          </div>
+          {/* --- END OF FIX --- */}
         </DialogContent>
       </Dialog>
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-8">
@@ -285,8 +343,6 @@ function PartySection({
   const isValidPointAllocation = (character: Character): boolean =>
     getTotalPoints(character) <= 80;
 
-  // --- THIS IS THE FIX ---
-  // This function now provides specific error messages.
   const saveParty = () => {
     if (!partyName.trim()) {
       alert("Please enter a name for your party.");
@@ -304,7 +360,6 @@ function PartySection({
         return;
       }
       if (!isValidPointAllocation(char)) {
-        // This alert is now very specific!
         alert(
           `Character "${
             char.name || "Unnamed"
@@ -316,7 +371,6 @@ function PartySection({
       }
     }
 
-    // If all checks pass, save the party
     setParty({ name: partyName, members: characters });
     setIsCreating(false);
   };
