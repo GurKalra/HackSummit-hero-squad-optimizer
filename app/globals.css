@@ -124,10 +124,11 @@
   }
   body {
     @apply bg-background text-foreground;
-    /* Added animated gradient background for magical mist effect */
-    background: linear-gradient(180deg, #f5f0e1 0%, #e8dcc6 50%, #d4af37 100%);
+    /* --- CHANGED --- */
+    /* Updated animated gradient for gold + light purple magical mist effect */
+    background: linear-gradient(180deg, #f5f0e1 0%, #d1c4e9 50%, #d4af37 100%);
     background-size: 100% 200%;
-    animation: mysticalMist 8s ease-in-out infinite alternate;
+    animation: mysticalMist 10s ease-in-out infinite alternate;
   }
 
   /* Added fantasy font classes */
