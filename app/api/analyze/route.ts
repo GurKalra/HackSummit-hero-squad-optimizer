@@ -2,8 +2,9 @@ import { type NextRequest, NextResponse } from "next/server";
 import * as tf from "@tensorflow/tfjs";
 import * as fs from "fs";
 import * as path from "path";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// --- INTERFACES ---
+// --- INTERFACES (Unchanged) ---
 interface Character {
   name: string;
   type: string;
@@ -18,48 +19,40 @@ interface Encounter {
   event_type: string;
 }
 
-// ✅ FINAL CORRECTED VERSION of the load handler
+// --- INITIALIZE MODELS ---
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const genaiModel = genAI.getGenerativeModel({
+  model: "gemini-1.5-flash-latest",
+});
+
 function fileSystemLoadHandler(): tf.io.ModelArtifacts {
   const modelPath = path.join(process.cwd(), "models", "party-optimizer-model");
-
   const modelJson = JSON.parse(
     fs.readFileSync(path.join(modelPath, "model.json"), "utf-8")
   );
-
   const modelTopology = modelJson.modelTopology;
   const weightSpecs = modelJson.weightsManifest[0].weights;
-
-  // Read the weights file into a Node.js Buffer
   const weightsBuffer = fs.readFileSync(path.join(modelPath, "weights.bin"));
-
-  // ⛔️ OLD WAY (Can cause a type error)
-  // const weightData = weightsBuffer.buffer.slice(
-  //   weightsBuffer.byteOffset,
-  //   weightsBuffer.byteOffset + weightsBuffer.byteLength
-  // );
-
-  // ✅ NEW WAY: Convert Buffer to a guaranteed standard ArrayBuffer
-  // This creates a Uint8Array view of the buffer, and its .buffer property is a standard ArrayBuffer.
   const weightData = new Uint8Array(weightsBuffer).buffer;
-
-  // Return all three required properties
   return { modelTopology, weightSpecs, weightData };
 }
-// --- LOAD THE TRAINED MODEL ---
-let model: tf.LayersModel;
-(async () => {
+
+// --- FIX: Implement a robust, promise-based model loader ---
+// This creates a promise that resolves with the loaded model or null on error.
+const modelPromise: Promise<tf.LayersModel | null> = (async () => {
   try {
-    // This now correctly passes the IOHandler object to loadLayersModel
-    model = await tf.loadLayersModel({
+    const model = await tf.loadLayersModel({
       load: () => Promise.resolve(fileSystemLoadHandler()),
     });
     console.log("✅ Party Optimizer model loaded successfully!");
+    return model;
   } catch (error) {
-    console.error("❌ Error loading model:", error);
+    console.error("❌ Error loading TensorFlow model:", error);
+    return null; // Return null if loading fails
   }
 })();
 
-// --- DATA PREPARATION ---
+// --- DATA PREPARATION & TFJS ANALYSIS ---
 function prepareDataForModel(
   party: Character[],
   encounter: Encounter
@@ -79,16 +72,13 @@ function prepareDataForModel(
     0
   );
   const totalWisdom = party.reduce((sum, char) => sum + (char.wisdom || 0), 0);
-
   const numMages = party.filter((c) => c.type === "Mage").length;
   const numBarbarians = party.filter((c) => c.type === "Barbarian").length;
   const numRogues = party.filter((c) => c.type === "Rogue").length;
   const numBandits = party.filter((c) => c.type === "Bandit").length;
-
   const isDragonFight = encounter.event_type === "Dragon Fight" ? 1 : 0;
   const isAncientTrap = encounter.event_type === "Ancient Trap" ? 1 : 0;
   const isMysticPuzzle = encounter.event_type === "Mystic Puzzle" ? 1 : 0;
-
   return [
     party.length,
     totalStrength,
@@ -106,13 +96,14 @@ function prepareDataForModel(
     isMysticPuzzle,
   ];
 }
-
 async function getTFJSAnalysis(
   party: Character[],
   encounter: Encounter
 ): Promise<number> {
+  // Await the model promise here. This safely waits for the model to be ready.
+  const model = await modelPromise;
   if (!model) {
-    console.error("Model not loaded. Returning a default value.");
+    console.error("TensorFlow model not available. Returning default value.");
     return 50;
   }
   const inputVector = prepareDataForModel(party, encounter);
@@ -124,9 +115,62 @@ async function getTFJSAnalysis(
   return Math.round(successChanceArray[0] * 100);
 }
 
+// --- GenAI and Fallback Logic (Unchanged) ---
+async function generateTurnSpecificActions(
+  character: Character,
+  eventType: string
+): Promise<string[]> {
+  const prompt = `
+    You are an expert Dungeon Master providing creative, class-specific tactical advice for a player's turn in a Dungeons & Dragons encounter.
+
+    Player Character:
+    - Name: ${character.name}
+    - Class: ${character.type}
+    - Stats: Strength(${character.strength}), Agility(${character.agility}), Health(${character.health}), Mana(${character.mana}), Dexterity(${character.dexterity}), Wisdom(${character.wisdom})
+
+    Current Encounter: "${eventType}"
+
+    Task:
+    Provide a JSON array of 3 strategic actions. The actions MUST be creative and strongly reflect the character's class abilities and playstyle. For example, a Mage should get spell-based actions, a Barbarian should get rage/strength actions, and a Rogue should get stealth or skill-based actions. The first action should be the primary recommendation. Actions must be concise (under 15 words).
+
+    Example for a Mage:
+    ["Primary: Cast 'Magic Missile' on the weakest target.", "Alternative: Conjure a 'Fog Cloud' for cover.", "Defensive: Prepare a 'Shield' spell."]
+
+    Example for a Rogue:
+    ["Primary: Use 'Sneak Attack' on the distracted guard.", "Alternative: Disengage and hide in the shadows.", "Defensive: Use 'Uncanny Dodge' to halve damage."]
+
+    Your Response (JSON array only):
+    `;
+
+  try {
+    const result = await genaiModel.generateContent(prompt);
+    const responseText = result.response.text();
+    const jsonString = responseText.replace(/```json|```/g, "").trim();
+    const actions = JSON.parse(jsonString);
+    return Array.isArray(actions)
+      ? actions
+      : fallbackActions(character, eventType);
+  } catch (error) {
+    console.error("GenAI call failed, using fallback.", error);
+    return fallbackActions(character, eventType);
+  }
+}
+function fallbackActions(character: Character, eventType: string): string[] {
+  const primaryAction = getRecommendedAction(character, eventType);
+  const actions = [`Primary: ${primaryAction}`];
+  if (eventType === "Dragon Fight") {
+    actions.push("Alternative: Use a defensive maneuver.");
+  } else if (eventType === "Ancient Trap") {
+    actions.push("Alternative: Search the area for triggers.");
+  }
+  actions.push("Default: Take the 'Dodge' action.");
+  return actions;
+}
+
 async function analyzePartyVsEncounter(
   party: Character[],
-  encounter: Encounter
+  encounter: Encounter,
+  currentTurnCharacterName: string
 ) {
   const finalSuccessChance = await getTFJSAnalysis(party, encounter);
   const weightedAnalysis = getWeightedAnalysis(
@@ -134,24 +178,43 @@ async function analyzePartyVsEncounter(
     encounter,
     finalSuccessChance
   );
+  const currentCharacter = party.find(
+    (char) => char.name === currentTurnCharacterName
+  );
+  let turnActions: string[] = [];
+  if (currentCharacter) {
+    turnActions = await generateTurnSpecificActions(
+      currentCharacter,
+      encounter.event_type
+    );
+  }
   return {
     party_success_chance: finalSuccessChance,
     individual_success_rates: weightedAnalysis.individual_success_rates,
     encounter_difficulty: getEncounterDifficulty(encounter.event_type),
     strategic_recommendations: weightedAnalysis.strategic_recommendations,
+    current_turn_actions: turnActions,
   };
 }
 
+// --- POST Handler and other helpers (Unchanged) ---
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    if (!body.party || !body.encounter) {
+    if (!body.party || !body.encounter || !body.current_turn_character) {
       return NextResponse.json(
-        { error: "Missing required fields: party, encounter" },
+        {
+          error:
+            "Missing required fields: party, encounter, current_turn_character",
+        },
         { status: 400 }
       );
     }
-    const analysis = await analyzePartyVsEncounter(body.party, body.encounter);
+    const analysis = await analyzePartyVsEncounter(
+      body.party,
+      body.encounter,
+      body.current_turn_character
+    );
     return NextResponse.json({ success: true, analysis });
   } catch (error) {
     console.error("Error analyzing party:", error);
@@ -162,7 +225,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// --- RECOMMENDATION HELPERS (These remain unchanged) ---
 interface StatWeights {
   strength: number;
   agility: number;
