@@ -3,13 +3,20 @@
 import type React from "react";
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,6 +51,54 @@ import {
   AlertTriangle, // Added for info card
   Lightbulb, // Added for info card
 } from "lucide-react";
+
+// --- CUSTOM ALERT DIALOG COMPONENT ---
+function CustomAlertDialog({
+  isOpen,
+  title,
+  description,
+  onClose,
+  onConfirm,
+  confirmText = "Confirm",
+  cancelText = "Cancel",
+}: {
+  isOpen: boolean;
+  title: string;
+  description: string;
+  onClose: () => void;
+  onConfirm?: () => void;
+  confirmText?: string;
+  cancelText?: string;
+}) {
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md bg-card border-2 border-border">
+        <DialogHeader>
+          <DialogTitle className="font-fantasy text-2xl text-primary glow-text">
+            {title}
+          </DialogTitle>
+        </DialogHeader>
+        <p className="text-card-foreground">{description}</p>
+        <DialogFooter className="mt-4">
+          <Button onClick={onClose} variant="outline">
+            {onConfirm ? cancelText : "OK"}
+          </Button>
+          {onConfirm && (
+            <Button
+              onClick={() => {
+                onConfirm();
+                onClose();
+              }}
+              className="bg-primary hover:bg-primary/80"
+            >
+              {confirmText}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 // --- 1. CONSOLIDATED DATA AND NEW COMPONENT ---
 
@@ -207,7 +262,6 @@ function ClassInfoCard({ info }: { info: ClassInfo }) {
 // --- CLIENT-SIDE INTERFACES ---
 type CharacterClass = keyof typeof classData;
 
-// FIXED: Corrected file extensions to match your screenshot
 const classPortraits: Record<CharacterClass, string> = {
   Mage: "/portraits/mage.png",
   Barbarian: "/portraits/barbarian.jpg",
@@ -246,7 +300,6 @@ interface GameEvent {
 const getDifficultyColor = (
   difficulty: "Easy" | "Medium" | "Hard" | string
 ) => {
-  // ... (rest of the file is the same until PartySection)
   switch (difficulty) {
     case "Easy":
       return "text-green-500";
@@ -287,6 +340,18 @@ export default function HomePage() {
   const [party, setParty] = useState<Party | null>(null);
   const [isRevealing, setIsRevealing] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  const [alertDialog, setAlertDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    onConfirm?: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    description: "",
+  });
+
   const rollDice = () => {
     if (isSpinning || isRevealing) return;
     setIsSpinning(true);
@@ -312,158 +377,183 @@ export default function HomePage() {
       }
     }
   };
-  if (currentSection === "party") {
-    return (
-      <PartySection
-        onBack={() => setCurrentSection("home")}
-        party={party}
-        setParty={setParty}
-      />
-    );
-  }
-  if (currentSection === "events") {
-    return (
-      <EventsSection onBack={() => setCurrentSection("home")} party={party} />
-    );
-  }
+
+  const mainContent = () => {
+    switch (currentSection) {
+      case "party":
+        return (
+          <PartySection
+            onBack={() => setCurrentSection("home")}
+            party={party}
+            setParty={setParty}
+            setAlertDialog={setAlertDialog}
+            onGoToEvents={() => setCurrentSection("events")}
+          />
+        );
+      case "events":
+        return (
+          <EventsSection
+            onBack={() => setCurrentSection("home")}
+            party={party}
+            setAlertDialog={setAlertDialog}
+          />
+        );
+      default:
+        return (
+          <div className="min-h-screen relative overflow-hidden">
+            <audio ref={audioRef} src="/music/fantasy-theme.mp3" loop />
+            <div className="absolute inset-0 opacity-10 bg-[url('/medieval-parchment-texture-with-faint-castle-illus.jpg')] bg-cover bg-center" />
+            <Button
+              onClick={toggleMusic}
+              className="fixed bottom-6 left-6 z-50 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-full p-3"
+              size="icon"
+            >
+              {musicPlaying ? (
+                <Volume2 className="h-5 w-5" />
+              ) : (
+                <VolumeX className="h-5 w-5" />
+              )}
+            </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button
+                  className="fixed bottom-6 right-6 z-50 bg-accent hover:bg-accent/80 text-accent-foreground rounded-full p-2"
+                  size="sm"
+                >
+                  <HelpCircle className="h-4 w-4 mr-1" /> Learn D&D
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl bg-card border-2 border-border">
+                <DialogHeader>
+                  <DialogTitle className="font-fantasy text-2xl text-primary glow-text">
+                    Dungeons & Dragons Guide
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 text-card-foreground leading-relaxed max-h-[70vh] overflow-y-auto pr-6">
+                  <p>
+                    Dungeons & Dragons (D&D) is a tabletop role-playing game
+                    where players create characters and embark on adventures
+                    guided by a Dungeon Master (DM). It's a game of imagination,
+                    strategy, and collaborative storytelling.
+                  </p>
+                  <div>
+                    <h3 className="font-fantasy text-lg text-primary mb-2">
+                      Core Concepts
+                    </h3>
+                    <ul className="list-disc list-inside space-y-1 pl-2">
+                      <li>
+                        <strong>Characters:</strong> Players create heroes with
+                        unique abilities, backgrounds, and personalities.
+                      </li>
+                      <li>
+                        <strong>Classes:</strong> Different character types like
+                        Warriors, Mages, Rogues, and Clerics.
+                      </li>
+                      <li>
+                        <strong>Stats:</strong> Numerical values representing
+                        character abilities (Strength, Agility, Health, etc.).
+                      </li>
+                      <li>
+                        <strong>Encounters:</strong> Challenges and battles that
+                        test the party's skills and teamwork.
+                      </li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h3 className="font-fantasy text-lg text-primary mb-2">
+                      How It Works
+                    </h3>
+                    <p>
+                      Players work together as a party to overcome obstacles,
+                      solve puzzles, and defeat enemies. The game uses dice
+                      rolls to determine the success of actions, adding an
+                      element of chance and excitement to every decision.
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="font-fantasy text-lg text-primary mb-2">
+                      Why Use an Optimizer?
+                    </h3>
+                    <p>
+                      The Hero Squad Optimizer helps players make strategic
+                      decisions during combat encounters. By analyzing party
+                      composition, enemy threats, and character abilities, it
+                      suggests the most effective actions to maximize your
+                      chances of success.
+                    </p>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-8">
+              <h1 className="font-fantasy text-6xl md:text-8xl font-bold text-primary mb-8 text-center glow-text">
+                Hero Squad Optimizer
+              </h1>
+              <div className="mb-12 text-center h-16 flex items-center justify-center">
+                <div
+                  onClick={rollDice}
+                  className="relative overflow-hidden inline-flex items-center justify-center p-4 rounded-lg bg-card/50 hover:bg-card/80 cursor-pointer transition-all duration-300 border-2 border-transparent hover:border-accent shadow-lg min-w-[300px] h-full"
+                >
+                  {isSpinning ? (
+                    <div className="flex items-center gap-3 text-secondary-foreground">
+                      <D20Icon className="h-6 w-6 animate-spin text-primary" />{" "}
+                      <span className="font-semibold text-lg">
+                        Deciding your fate...
+                      </span>
+                    </div>
+                  ) : isRevealing ? (
+                    <>
+                      <Wand2 className="h-8 w-8 text-primary absolute animate-sweep" />{" "}
+                      <span className="font-semibold text-lg text-secondary-foreground/50">
+                        Revealing...
+                      </span>
+                    </>
+                  ) : diceValue !== null ? (
+                    <p className="font-fantasy text-2xl text-primary animate-in fade-in zoom-in-50 duration-500">
+                      Fate has decided: {diceValue}
+                    </p>
+                  ) : (
+                    <div className="flex items-center gap-3 text-secondary-foreground">
+                      <D20Icon className="h-6 w-6" />{" "}
+                      <span className="font-semibold text-lg">
+                        Click to discover your fate
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-6">
+                <Button
+                  onClick={() => setCurrentSection("party")}
+                  className="bg-primary hover:bg-primary/80 text-primary-foreground px-8 py-4 text-lg font-semibold rounded-lg border-2 border-accent shadow-lg hover:shadow-xl transition-all"
+                >
+                  Create Party
+                </Button>
+                <Button
+                  onClick={() => setCurrentSection("events")}
+                  className="bg-secondary hover:bg-secondary/80 text-secondary-foreground px-8 py-4 text-lg font-semibold rounded-lg border-2 border-primary shadow-lg hover:shadow-xl transition-all"
+                >
+                  Choose Events
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+    }
+  };
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      <audio ref={audioRef} src="/music/fantasy-theme.mp3" loop />
-      <div className="absolute inset-0 opacity-10 bg-[url('/medieval-parchment-texture-with-faint-castle-illus.jpg')] bg-cover bg-center" />
-      <Button
-        onClick={toggleMusic}
-        className="fixed bottom-6 left-6 z-50 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-full p-3"
-        size="icon"
-      >
-        {musicPlaying ? (
-          <Volume2 className="h-5 w-5" />
-        ) : (
-          <VolumeX className="h-5 w-5" />
-        )}
-      </Button>
-      <Dialog>
-        <DialogTrigger asChild>
-          <Button
-            className="fixed bottom-6 right-6 z-50 bg-accent hover:bg-accent/80 text-accent-foreground rounded-full p-2"
-            size="sm"
-          >
-            <HelpCircle className="h-4 w-4 mr-1" /> Learn D&D
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="max-w-2xl bg-card border-2 border-border">
-          <DialogHeader>
-            <DialogTitle className="font-fantasy text-2xl text-primary glow-text">
-              Dungeons & Dragons Guide
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 text-card-foreground leading-relaxed max-h-[70vh] overflow-y-auto pr-6">
-            <p>
-              Dungeons & Dragons (D&D) is a tabletop role-playing game where
-              players create characters and embark on adventures guided by a
-              Dungeon Master (DM). It's a game of imagination, strategy, and
-              collaborative storytelling.
-            </p>
-            <div>
-              <h3 className="font-fantasy text-lg text-primary mb-2">
-                Core Concepts
-              </h3>
-              <ul className="list-disc list-inside space-y-1 pl-2">
-                <li>
-                  <strong>Characters:</strong> Players create heroes with unique
-                  abilities, backgrounds, and personalities.
-                </li>
-                <li>
-                  <strong>Classes:</strong> Different character types like
-                  Warriors, Mages, Rogues, and Clerics.
-                </li>
-                <li>
-                  <strong>Stats:</strong> Numerical values representing
-                  character abilities (Strength, Agility, Health, etc.).
-                </li>
-                <li>
-                  <strong>Encounters:</strong> Challenges and battles that test
-                  the party's skills and teamwork.
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-fantasy text-lg text-primary mb-2">
-                How It Works
-              </h3>
-              <p>
-                Players work together as a party to overcome obstacles, solve
-                puzzles, and defeat enemies. The game uses dice rolls to
-                determine the success of actions, adding an element of chance
-                and excitement to every decision.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-fantasy text-lg text-primary mb-2">
-                Why Use an Optimizer?
-              </h3>
-              <p>
-                The Hero Squad Optimizer helps players make strategic decisions
-                during combat encounters. By analyzing party composition, enemy
-                threats, and character abilities, it suggests the most effective
-                actions to maximize your chances of success.
-              </p>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-8">
-        <h1 className="font-fantasy text-6xl md:text-8xl font-bold text-primary mb-8 text-center glow-text">
-          Hero Squad Optimizer
-        </h1>
-        <div className="mb-12 text-center h-16 flex items-center justify-center">
-          <div
-            onClick={rollDice}
-            className="relative overflow-hidden inline-flex items-center justify-center p-4 rounded-lg bg-card/50 hover:bg-card/80 cursor-pointer transition-all duration-300 border-2 border-transparent hover:border-accent shadow-lg min-w-[300px] h-full"
-          >
-            {isSpinning ? (
-              <div className="flex items-center gap-3 text-secondary-foreground">
-                <D20Icon className="h-6 w-6 animate-spin text-primary" />{" "}
-                <span className="font-semibold text-lg">
-                  Deciding your fate...
-                </span>
-              </div>
-            ) : isRevealing ? (
-              <>
-                <Wand2 className="h-8 w-8 text-primary absolute animate-sweep" />{" "}
-                <span className="font-semibold text-lg text-secondary-foreground/50">
-                  Revealing...
-                </span>
-              </>
-            ) : diceValue !== null ? (
-              <p className="font-fantasy text-2xl text-primary animate-in fade-in zoom-in-50 duration-500">
-                Fate has decided: {diceValue}
-              </p>
-            ) : (
-              <div className="flex items-center gap-3 text-secondary-foreground">
-                <D20Icon className="h-6 w-6" />{" "}
-                <span className="font-semibold text-lg">
-                  Click to discover your fate
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-6">
-          <Button
-            onClick={() => setCurrentSection("party")}
-            className="bg-primary hover:bg-primary/80 text-primary-foreground px-8 py-4 text-lg font-semibold rounded-lg border-2 border-accent shadow-lg hover:shadow-xl transition-all"
-          >
-            Create Party
-          </Button>
-          <Button
-            onClick={() => setCurrentSection("events")}
-            className="bg-secondary hover:bg-secondary/80 text-secondary-foreground px-8 py-4 text-lg font-semibold rounded-lg border-2 border-primary shadow-lg hover:shadow-xl transition-all"
-          >
-            Choose Events
-          </Button>
-        </div>
-      </div>
-    </div>
+    <>
+      <CustomAlertDialog
+        isOpen={alertDialog.isOpen}
+        title={alertDialog.title}
+        description={alertDialog.description}
+        onConfirm={alertDialog.onConfirm}
+        onClose={() =>
+          setAlertDialog({ isOpen: false, title: "", description: "" })
+        }
+      />
+      {mainContent()}
+    </>
   );
 }
 
@@ -472,10 +562,14 @@ function PartySection({
   onBack,
   party,
   setParty,
+  setAlertDialog,
+  onGoToEvents,
 }: {
   onBack: () => void;
   party: Party | null;
   setParty: (party: Party | null) => void;
+  setAlertDialog: (dialogState: any) => void;
+  onGoToEvents: () => void;
 }) {
   const [partyName, setPartyName] = useState(party?.name || "");
   const [memberCount, setMemberCount] = useState(party?.members.length || 1);
@@ -484,7 +578,6 @@ function PartySection({
   );
   const [isCreating, setIsCreating] = useState(!party);
 
-  // Updated to use the new `classData` object
   const createNewCharacter = (
     charClass: CharacterClass = "Mage"
   ): Character => ({
@@ -513,7 +606,6 @@ function PartySection({
     setCharacters(updated);
   };
 
-  // Updated to use the new `classData` object
   const handleCharacterClassChange = (
     index: number,
     newClass: CharacterClass
@@ -540,26 +632,40 @@ function PartySection({
 
   const saveParty = () => {
     if (!partyName.trim()) {
-      alert("Please enter a name for your party.");
+      setAlertDialog({
+        isOpen: true,
+        title: "Party Name Required",
+        description: "Please enter a name for your party.",
+      });
       return;
     }
     if (characters.length === 0) {
-      alert("A party must have at least one member.");
+      setAlertDialog({
+        isOpen: true,
+        title: "Party Members Required",
+        description: "A party must have at least one member.",
+      });
       return;
     }
     for (const char of characters) {
       if (!char.name.trim()) {
-        alert("Please make sure every character has a name.");
+        setAlertDialog({
+          isOpen: true,
+          title: "Character Name Required",
+          description: "Please make sure every character has a name.",
+        });
         return;
       }
       if (!isValidPointAllocation(char)) {
-        alert(
-          `Character "${
+        setAlertDialog({
+          isOpen: true,
+          title: "Invalid Point Allocation",
+          description: `Character "${
             char.name || "Unnamed"
           }" has a total of ${getTotalPoints(
             char
-          )} points, which exceeds the maximum of 80.`
-        );
+          )} points, which exceeds the maximum of 80.`,
+        });
         return;
       }
     }
@@ -568,13 +674,18 @@ function PartySection({
   };
 
   const deleteParty = () => {
-    if (window.confirm("Are you sure you want to delete this party?")) {
-      setParty(null);
-      setIsCreating(true);
-      setPartyName("");
-      setCharacters([]);
-      setMemberCount(1);
-    }
+    setAlertDialog({
+      isOpen: true,
+      title: "Delete Party",
+      description: "Are you sure you want to delete this party forever?",
+      onConfirm: () => {
+        setParty(null);
+        setIsCreating(true);
+        setPartyName("");
+        setCharacters([]);
+        setMemberCount(1);
+      },
+    });
   };
 
   const editParty = () => {
@@ -599,8 +710,6 @@ function PartySection({
               {party ? "Edit Your Party" : "Create Your Party"}
             </h1>
             <div className="max-w-7xl mx-auto space-y-8">
-              {" "}
-              {/* Increased max-width for new layout */}
               <Card className="bg-card/90 backdrop-blur border-2 border-accent shadow-xl">
                 <CardHeader>
                   <CardTitle className="font-fantasy text-xl text-primary">
@@ -654,10 +763,8 @@ function PartySection({
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {/* --- 3. UPDATED LAYOUT WITH INFO CARD --- */}
                       <div className="flex flex-col xl:flex-row items-start gap-6">
                         <div className="flex-grow w-full space-y-4">
-                          {/* ADDED: Character Portrait */}
                           <div className="flex items-start gap-4">
                             <img
                               src={classPortraits[character.class]}
@@ -811,13 +918,12 @@ function PartySection({
             </div>
           </>
         ) : (
-          // ... (The rest of the file remains unchanged)
           <div className="max-w-4xl mx-auto space-y-8">
             <div className="flex justify-between items-center mb-8">
               <h1 className="font-fantasy text-4xl md:text-6xl text-primary glow-text">
                 Party: {party?.name}
               </h1>
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-4">
                 <Button
                   onClick={editParty}
                   variant="outline"
@@ -830,6 +936,12 @@ function PartySection({
                   className="bg-destructive hover:bg-destructive/80"
                 >
                   <Trash2 className="h-4 w-4 mr-2" /> Delete Party
+                </Button>
+                <Button
+                  onClick={onGoToEvents}
+                  className="bg-primary hover:bg-primary/80"
+                >
+                  Choose Events <Sword className="h-4 w-4 ml-2" />
                 </Button>
               </div>
             </div>
@@ -884,15 +996,16 @@ function PartySection({
 function EventsSection({
   onBack,
   party,
+  setAlertDialog,
 }: {
   onBack: () => void;
   party: Party | null;
+  setAlertDialog: (dialogState: any) => void;
 }) {
   const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showAdventure, setShowAdventure] = useState(false);
 
-  // FIXED: Corrected filenames and extensions to match your screenshot
   const events: GameEvent[] = [
     {
       id: "dragon-fight",
@@ -925,7 +1038,12 @@ function EventsSection({
 
   const handleEventSelect = (event: GameEvent) => {
     if (!party || party.members.length === 0) {
-      alert("You need to create a party first!");
+      setAlertDialog({
+        isOpen: true,
+        title: "Party Required",
+        description:
+          "You need to create a party first before starting an adventure!",
+      });
       return;
     }
     setSelectedEvent(event);
@@ -945,6 +1063,7 @@ function EventsSection({
           setSelectedEvent(null);
           setIsLoading(false);
         }}
+        setAlertDialog={setAlertDialog}
       />
     );
   }
@@ -976,7 +1095,7 @@ function EventsSection({
         {!party && (
           <Card className="max-w-2xl mx-auto mb-8 bg-card/90 backdrop-blur border-2 border-destructive">
             <CardContent className="p-6 text-center">
-              <p className="text-lg text-destructive-foreground">
+              <p className="text-lg text-black">
                 You need to create a party before embarking on an adventure!
               </p>
               <Button
@@ -1041,16 +1160,18 @@ function AdventureScreen({
   party,
   isLoading,
   onBack,
+  setAlertDialog,
 }: {
   event: GameEvent;
   party: Party | null;
   isLoading: boolean;
   onBack: () => void;
+  setAlertDialog: (dialogState: any) => void;
 }) {
-  // ... This component is unchanged
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [currentTurnCharacter, setCurrentTurnCharacter] = useState<string>("");
+
   const handleOptimizeActions = async () => {
     if (!party || party.members.length === 0 || !currentTurnCharacter) return;
     setIsAnalyzing(true);
@@ -1092,11 +1213,16 @@ function AdventureScreen({
       }
     } catch (error) {
       console.error("Error during analysis:", error);
-      alert("Could not retrieve analysis. Please try again.");
+      setAlertDialog({
+        isOpen: true,
+        title: "Analysis Failed",
+        description: "Could not retrieve strategic analysis. Please try again.",
+      });
     } finally {
       setIsAnalyzing(false);
     }
   };
+
   const getEnemyName = (eventName: EventType): string => {
     switch (eventName) {
       case "Dragon Fight":
@@ -1109,6 +1235,7 @@ function AdventureScreen({
         return "Unknown Enemy";
     }
   };
+
   const getEnemyHealth = (eventName: EventType): number => {
     switch (eventName) {
       case "Dragon Fight":
@@ -1121,6 +1248,7 @@ function AdventureScreen({
         return 100;
     }
   };
+
   const getSuccessColor = (rate: number): string => {
     if (rate >= 70) return "text-green-500";
     if (rate >= 40) return "text-yellow-500";
@@ -1167,6 +1295,7 @@ function AdventureScreen({
       </div>
     );
   }
+
   return (
     <div className="min-h-screen relative overflow-hidden">
       <div
@@ -1366,7 +1495,7 @@ function AdventureScreen({
                               value={char.success_rate}
                               className="h-6"
                             />
-                            <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white">
+                            <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-black">
                               {char.recommended_action}
                             </div>
                           </div>
