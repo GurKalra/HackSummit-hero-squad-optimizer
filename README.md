@@ -52,7 +52,7 @@ Together, **TensorFlow.js provides the “what”**, while **Gemini provides the
 
 ## 📂 Project Structure
 
-~~~~~
+~~~
 ├── /public/ # Static assets (images, music)
 ├── /src/
 │ ├── /app/
@@ -65,43 +65,43 @@ Together, **TensorFlow.js provides the “what”**, while **Gemini provides the
 │ └── train-model.ts # Offline training script
 └── README.md
 
------
+~~~
 
 ## 🚀 Getting Started Locally
 
 To run this project on your local machine, follow these steps:
 
 1.  *Clone the repository*:
-
+~~~
     bash
     git clone https://github.com/your-username/v0-hero-squad-optimizer.git
     cd v0-hero-squad-optimizer
-    
+~~~
 
 2.  *Install dependencies*:
-
+~~~
     bash
     npm install
-    
+~~~    
 
 3.  *Set up environment variables*:
     Create a file named .env.local in the root of the project and add your Google Gemini API key:
 
-    
+~~~    
     GEMINI_API_KEY=your_api_key_here
-    
+~~~   
 
 4.  *(Optional) Train the model*:
     If you make changes to the dataset, you can retrain the TensorFlow.js model by running:
-
+~~~
     bash
     npx ts-node --project tsconfig.scripts.json scripts/train-model.ts
-    
+~~~    
 
 5.  *Run the development server*:
-
+~~~
     bash
     npm run dev
-    
+~~~    
 
 Open [http://localhost:3000](https://www.google.com/search?q=http://localhost:3000) in your browser to see the result.
