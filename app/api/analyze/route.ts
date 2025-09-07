@@ -1,9 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
+import * as tf from "@tensorflow/tfjs";
+import * as fs from "fs";
+import * as path from "path";
 
 // --- INTERFACES ---
 interface Character {
   name: string;
-  type: string; // "Mage", "Barbarian", "Rogue", "Bandit"
+  type: string;
   strength: number;
   agility: number;
   health: number;
@@ -11,35 +14,144 @@ interface Character {
   dexterity?: number;
   wisdom?: number;
 }
-interface Enemy {
-  name: string;
-  health: number;
-}
 interface Encounter {
   event_type: string;
-  enemy: Enemy;
-}
-interface AnalyzeRequest {
-  party: Character[];
-  encounter: Encounter;
-  current_turn_character: string;
 }
 
-// --- API ROUTE HANDLER ---
+// ✅ FINAL CORRECTED VERSION of the load handler
+function fileSystemLoadHandler(): tf.io.ModelArtifacts {
+  const modelPath = path.join(process.cwd(), "models", "party-optimizer-model");
+
+  const modelJson = JSON.parse(
+    fs.readFileSync(path.join(modelPath, "model.json"), "utf-8")
+  );
+
+  const modelTopology = modelJson.modelTopology;
+  const weightSpecs = modelJson.weightsManifest[0].weights;
+
+  // Read the weights file into a Node.js Buffer
+  const weightsBuffer = fs.readFileSync(path.join(modelPath, "weights.bin"));
+
+  // ⛔️ OLD WAY (Can cause a type error)
+  // const weightData = weightsBuffer.buffer.slice(
+  //   weightsBuffer.byteOffset,
+  //   weightsBuffer.byteOffset + weightsBuffer.byteLength
+  // );
+
+  // ✅ NEW WAY: Convert Buffer to a guaranteed standard ArrayBuffer
+  // This creates a Uint8Array view of the buffer, and its .buffer property is a standard ArrayBuffer.
+  const weightData = new Uint8Array(weightsBuffer).buffer;
+
+  // Return all three required properties
+  return { modelTopology, weightSpecs, weightData };
+}
+// --- LOAD THE TRAINED MODEL ---
+let model: tf.LayersModel;
+(async () => {
+  try {
+    // This now correctly passes the IOHandler object to loadLayersModel
+    model = await tf.loadLayersModel({
+      load: () => Promise.resolve(fileSystemLoadHandler()),
+    });
+    console.log("✅ Party Optimizer model loaded successfully!");
+  } catch (error) {
+    console.error("❌ Error loading model:", error);
+  }
+})();
+
+// --- DATA PREPARATION ---
+function prepareDataForModel(
+  party: Character[],
+  encounter: Encounter
+): number[] {
+  const totalStrength = party.reduce(
+    (sum, char) => sum + (char.strength || 0),
+    0
+  );
+  const totalHealth = party.reduce((sum, char) => sum + (char.health || 0), 0);
+  const totalAgility = party.reduce(
+    (sum, char) => sum + (char.agility || 0),
+    0
+  );
+  const totalMana = party.reduce((sum, char) => sum + (char.mana || 0), 0);
+  const totalDexterity = party.reduce(
+    (sum, char) => sum + (char.dexterity || 0),
+    0
+  );
+  const totalWisdom = party.reduce((sum, char) => sum + (char.wisdom || 0), 0);
+
+  const numMages = party.filter((c) => c.type === "Mage").length;
+  const numBarbarians = party.filter((c) => c.type === "Barbarian").length;
+  const numRogues = party.filter((c) => c.type === "Rogue").length;
+  const numBandits = party.filter((c) => c.type === "Bandit").length;
+
+  const isDragonFight = encounter.event_type === "Dragon Fight" ? 1 : 0;
+  const isAncientTrap = encounter.event_type === "Ancient Trap" ? 1 : 0;
+  const isMysticPuzzle = encounter.event_type === "Mystic Puzzle" ? 1 : 0;
+
+  return [
+    party.length,
+    totalStrength,
+    totalHealth,
+    totalAgility,
+    totalMana,
+    totalDexterity,
+    totalWisdom,
+    numMages,
+    numBarbarians,
+    numRogues,
+    numBandits,
+    isDragonFight,
+    isAncientTrap,
+    isMysticPuzzle,
+  ];
+}
+
+async function getTFJSAnalysis(
+  party: Character[],
+  encounter: Encounter
+): Promise<number> {
+  if (!model) {
+    console.error("Model not loaded. Returning a default value.");
+    return 50;
+  }
+  const inputVector = prepareDataForModel(party, encounter);
+  const inputTensor = tf.tensor2d([inputVector]);
+  const prediction = model.predict(inputTensor) as tf.Tensor;
+  const successChanceArray = await prediction.data();
+  inputTensor.dispose();
+  prediction.dispose();
+  return Math.round(successChanceArray[0] * 100);
+}
+
+async function analyzePartyVsEncounter(
+  party: Character[],
+  encounter: Encounter
+) {
+  const finalSuccessChance = await getTFJSAnalysis(party, encounter);
+  const weightedAnalysis = getWeightedAnalysis(
+    party,
+    encounter,
+    finalSuccessChance
+  );
+  return {
+    party_success_chance: finalSuccessChance,
+    individual_success_rates: weightedAnalysis.individual_success_rates,
+    encounter_difficulty: getEncounterDifficulty(encounter.event_type),
+    strategic_recommendations: weightedAnalysis.strategic_recommendations,
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body: AnalyzeRequest = await request.json();
-
+    const body = await request.json();
     if (!body.party || !body.encounter) {
       return NextResponse.json(
         { error: "Missing required fields: party, encounter" },
         { status: 400 }
       );
     }
-
-    // ✨ Use the new, upgraded analysis method
-    const analysis = analyzePartyVsEncounter(body.party, body.encounter);
-
+    const analysis = await analyzePartyVsEncounter(body.party, body.encounter);
     return NextResponse.json({ success: true, analysis });
   } catch (error) {
     console.error("Error analyzing party:", error);
@@ -50,290 +162,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// --- ✨ UPDATED: HYBRID ANALYSIS CONTROLLER ---
-function analyzePartyVsEncounter(party: Character[], encounter: Encounter) {
-  // 1. Get the base probability from the Naive Bayes calculation
-  const baseSuccessChance = runBayesianAnalysis(party, encounter);
-
-  // 2. Apply advanced, ML-like modifiers for synergy and diminishing returns
-  const finalSuccessChance = applyAdvancedModifiers(
-    baseSuccessChance,
-    party,
-    encounter
-  );
-
-  // 3. Generate recommendations based on the final, nuanced probability
-  const weightedAnalysis = getWeightedAnalysis(
-    party,
-    encounter,
-    finalSuccessChance
-  );
-
-  return {
-    party_success_chance: finalSuccessChance,
-    individual_success_rates: weightedAnalysis.individual_success_rates,
-    encounter_difficulty: getEncounterDifficulty(encounter.event_type),
-    strategic_recommendations: weightedAnalysis.strategic_recommendations,
-  };
-}
-
-// ==================================================================
-// --- ✨ NEW: ADVANCED MODIFIER SYSTEM (The "ML-like" Layer) ---
-// ==================================================================
-
-/**
- * Applies a series of advanced adjustments to the base probability.
- * This function acts as the brain, layering complexity onto the initial guess.
- */
-function applyAdvancedModifiers(
-  baseChance: number,
-  party: Character[],
-  encounter: Encounter
-): number {
-  let modifiedChance = baseChance;
-
-  // Apply Synergy & Counter adjustments
-  const synergyMultiplier = getSynergyMultiplier(party, encounter);
-  modifiedChance *= synergyMultiplier;
-
-  // Apply Diminishing Returns
-  modifiedChance = applyDiminishingReturns(modifiedChance, party);
-
-  // Clamp the final value between a reasonable floor and ceiling (e.g., 5% to 95%)
-  return Math.round(Math.max(5, Math.min(95, modifiedChance)));
-}
-
-/**
- * Calculates a multiplier based on party composition synergies and counters.
- * This is where the model understands "teamwork".
- */
-function getSynergyMultiplier(
-  party: Character[],
-  encounter: Encounter
-): number {
-  let multiplier = 1.0;
-  const partyClasses = new Set(party.map((c) => c.type));
-
-  // --- POSITIVE SYNERGIES ---
-  // Classic Tank & Glass Cannon combo
-  if (partyClasses.has("Barbarian") && partyClasses.has("Mage")) {
-    multiplier += 0.1; // 10% boost for this classic combo
-  }
-  // Balanced Party: having a mix of damage, utility, and toughness
-  if (
-    partyClasses.has("Barbarian") &&
-    partyClasses.has("Mage") &&
-    partyClasses.has("Rogue")
-  ) {
-    multiplier += 0.15; // 15% bonus for a well-rounded trio
-  }
-  // Specialist Team for Traps
-  if (
-    encounter.event_type === "Ancient Trap" &&
-    partyClasses.has("Rogue") &&
-    partyClasses.has("Bandit")
-  ) {
-    multiplier += 0.2; // 20% bonus for a team of trap experts
-  }
-
-  // --- NEGATIVE SYNERGIES (COUNTERS) ---
-  // All-magic party vs. a Dragon Fight (likely has magic resistance)
-  if (
-    encounter.event_type === "Dragon Fight" &&
-    party.every((c) => c.type === "Mage")
-  ) {
-    multiplier -= 0.25; // 25% penalty for a bad matchup
-  }
-  // All-brawn party vs. a Mystic Puzzle
-  if (
-    encounter.event_type === "Mystic Puzzle" &&
-    party.every((c) => c.type === "Barbarian" || c.type === "Bandit")
-  ) {
-    multiplier -= 0.3; // 30% penalty, a very difficult challenge for this team
-  }
-
-  return multiplier;
-}
-
-/**
- * Applies a penalty for "over-stacking" stats, simulating diminishing returns.
- * This introduces non-linearity, a key feature of advanced models.
- */
-function applyDiminishingReturns(chance: number, party: Character[]): number {
-  const STAT_THRESHOLD = 22;
-  const PENALTY_PER_POINT = 0.005; // 0.5% penalty per point over the threshold
-
-  let totalPenalty = 0;
-
-  party.forEach((character) => {
-    const stats: (keyof Character)[] = [
-      "strength",
-      "agility",
-      "health",
-      "mana",
-      "dexterity",
-      "wisdom",
-    ];
-    stats.forEach((stat) => {
-      const value = character[stat] as number | undefined;
-      if (value && value > STAT_THRESHOLD) {
-        totalPenalty += (value - STAT_THRESHOLD) * PENALTY_PER_POINT;
-      }
-    });
-  });
-
-  // Apply the total penalty, but don't let it reduce the chance by more than, say, 30%
-  return chance * (1 - Math.min(0.3, totalPenalty));
-}
-
-// ==================================================================
-// --- ✨ NEW: CORE NAIVE BAYES CLASSIFIER LOGIC ---
-// ==================================================================
-
-function getSuccessPriors(eventType: string): {
-  success: number;
-  failure: number;
-} {
-  switch (eventType) {
-    case "Dragon Fight":
-      return { success: 0.4, failure: 0.6 };
-    case "Ancient Trap":
-      return { success: 0.55, failure: 0.45 };
-    case "Mystic Puzzle":
-      return { success: 0.7, failure: 0.3 };
-    default:
-      return { success: 0.5, failure: 0.5 };
-  }
-}
-
-function getLikelihoods(eventType: string): Record<string, any> {
-  const defaults = {
-    strength: {
-      success: { low: 0.2, med: 0.4, high: 0.4 },
-      failure: { low: 0.4, med: 0.4, high: 0.2 },
-    },
-    agility: {
-      success: { low: 0.2, med: 0.4, high: 0.4 },
-      failure: { low: 0.4, med: 0.4, high: 0.2 },
-    },
-    health: {
-      success: { low: 0.2, med: 0.4, high: 0.4 },
-      failure: { low: 0.4, med: 0.4, high: 0.2 },
-    },
-    mana: {
-      success: { low: 0.2, med: 0.4, high: 0.4 },
-      failure: { low: 0.4, med: 0.4, high: 0.2 },
-    },
-    dexterity: {
-      success: { low: 0.2, med: 0.4, high: 0.4 },
-      failure: { low: 0.4, med: 0.4, high: 0.2 },
-    },
-    wisdom: {
-      success: { low: 0.2, med: 0.4, high: 0.4 },
-      failure: { low: 0.4, med: 0.4, high: 0.2 },
-    },
-  };
-
-  switch (eventType) {
-    case "Dragon Fight":
-      return {
-        ...defaults,
-        strength: {
-          success: { low: 0.1, med: 0.3, high: 0.6 },
-          failure: { low: 0.6, med: 0.3, high: 0.1 },
-        },
-        health: {
-          success: { low: 0.15, med: 0.35, high: 0.5 },
-          failure: { low: 0.5, med: 0.35, high: 0.15 },
-        },
-        agility: {
-          success: { low: 0.2, med: 0.5, high: 0.3 },
-          failure: { low: 0.3, med: 0.5, high: 0.2 },
-        },
-      };
-    case "Ancient Trap":
-      return {
-        ...defaults,
-        dexterity: {
-          success: { low: 0.1, med: 0.3, high: 0.6 },
-          failure: { low: 0.6, med: 0.3, high: 0.1 },
-        },
-        agility: {
-          success: { low: 0.15, med: 0.35, high: 0.5 },
-          failure: { low: 0.5, med: 0.35, high: 0.15 },
-        },
-        wisdom: {
-          success: { low: 0.2, med: 0.5, high: 0.3 },
-          failure: { low: 0.3, med: 0.5, high: 0.2 },
-        },
-      };
-    case "Mystic Puzzle":
-      return {
-        ...defaults,
-        wisdom: {
-          success: { low: 0.05, med: 0.25, high: 0.7 },
-          failure: { low: 0.7, med: 0.25, high: 0.05 },
-        },
-        mana: {
-          success: { low: 0.1, med: 0.4, high: 0.5 },
-          failure: { low: 0.5, med: 0.4, high: 0.1 },
-        },
-      };
-    default:
-      return defaults;
-  }
-}
-
-function getStatCategory(value: number): "low" | "med" | "high" {
-  if (value < 10) return "low";
-  if (value < 20) return "med";
-  return "high";
-}
-
-function runBayesianAnalysis(party: Character[], encounter: Encounter): number {
-  const basePriors = getSuccessPriors(encounter.event_type);
-  const likelihoods = getLikelihoods(encounter.event_type);
-
-  // Party Size Scaling: Adjust priors based on party size.
-  const partySizeMultiplier = 0.8 + 0.1 * party.length; // 1=.9, 2=1, 3=1.1, 4=1.2
-  const priors = {
-    success: basePriors.success * partySizeMultiplier,
-    failure: basePriors.failure / partySizeMultiplier,
-  };
-
-  // Use log probabilities to avoid underflow
-  let logProbSuccess = Math.log(priors.success);
-  let logProbFailure = Math.log(priors.failure);
-
-  party.forEach((character) => {
-    Object.keys(character).forEach((statKey) => {
-      const statValue = (character as any)[statKey];
-      if (typeof statValue === "number" && likelihoods[statKey]) {
-        const category = getStatCategory(statValue);
-        // Add a small value (Laplace smoothing) to prevent log(0)
-        logProbSuccess += Math.log(
-          likelihoods[statKey].success[category] + 0.01
-        );
-        logProbFailure += Math.log(
-          likelihoods[statKey].failure[category] + 0.01
-        );
-      }
-    });
-  });
-
-  const probSuccess = Math.exp(logProbSuccess);
-  const probFailure = Math.exp(logProbFailure);
-  const totalProb = probSuccess + probFailure;
-
-  if (totalProb === 0) return 50;
-
-  return (probSuccess / totalProb) * 100;
-}
-
-// ==================================================================
-// --- GRANULAR WEIGHTING & RECOMMENDATION HELPERS (Unchanged) ---
-// ==================================================================
-
+// --- RECOMMENDATION HELPERS (These remain unchanged) ---
 interface StatWeights {
   strength: number;
   agility: number;
@@ -342,7 +171,6 @@ interface StatWeights {
   dexterity: number;
   wisdom: number;
 }
-
 function getStatWeights(eventType: string): StatWeights {
   switch (eventType) {
     case "Dragon Fight":
@@ -383,7 +211,6 @@ function getStatWeights(eventType: string): StatWeights {
       };
   }
 }
-
 function getWeightedAnalysis(
   party: Character[],
   encounter: Encounter,
@@ -395,42 +222,35 @@ function getWeightedAnalysis(
     0
   );
   const difficultyMultiplier = getDifficultyMultiplier(encounter.event_type);
-
   const individualRates = party.map((character) => {
     const charTotalWeighted =
-      character.strength * weights.strength +
-      character.agility * weights.agility +
-      character.health * weights.health +
+      (character.strength || 0) * weights.strength +
+      (character.agility || 0) * weights.agility +
+      (character.health || 0) * weights.health +
       (character.mana || 0) * weights.mana +
       (character.dexterity || 0) * weights.dexterity +
       (character.wisdom || 0) * weights.wisdom;
-
     const charBaseRate = charTotalWeighted / (totalWeight * 15);
     const charSuccessRate = Math.min(
       95,
       Math.max(15, 20 + charBaseRate * 75 * difficultyMultiplier)
     );
-
     return {
       character: character.name,
       success_rate: Math.round(charSuccessRate),
-      // FIX: Correctly pass encounter.event_type
       recommended_action: getRecommendedAction(character, encounter.event_type),
     };
   });
-
   const recommendations = generateRecommendations(
     party,
     encounter,
     partySuccessChance
   );
-
   return {
     individual_success_rates: individualRates,
     strategic_recommendations: recommendations,
   };
 }
-
 function getDifficultyMultiplier(eventType: string): number {
   switch (eventType) {
     case "Dragon Fight":
@@ -443,7 +263,6 @@ function getDifficultyMultiplier(eventType: string): number {
       return 0.95;
   }
 }
-
 function getEncounterDifficulty(eventType: string): string {
   switch (eventType) {
     case "Dragon Fight":
@@ -456,7 +275,6 @@ function getEncounterDifficulty(eventType: string): string {
       return "Unknown";
   }
 }
-
 function getRecommendedAction(character: Character, eventType: string): string {
   const stats = {
     str: character.strength,
@@ -465,7 +283,6 @@ function getRecommendedAction(character: Character, eventType: string): string {
     wis: character.wisdom || 0,
     mana: character.mana || 0,
   };
-
   switch (eventType) {
     case "Dragon Fight":
       if (stats.str > 15) return "Power Attack";
@@ -486,19 +303,16 @@ function getRecommendedAction(character: Character, eventType: string): string {
       return "Take Action";
   }
 }
-
 function generateRecommendations(
   party: Character[],
   encounter: Encounter,
   successChance: number
 ): string[] {
   const recs: string[] = [];
-  // FIX: Corrected the typing for the 'stat' parameter to match the local Character interface.
   const findBest = (stat: keyof Omit<Character, "name" | "type">) =>
     party.reduce((best, char) =>
       (char[stat] || 0) > (best[stat] || 0) ? char : best
     );
-
   if (successChance < 40) {
     recs.push(
       "This is a highly challenging encounter. Survival should be the top priority; focus on defensive abilities and healing."
@@ -512,7 +326,6 @@ function generateRecommendations(
       "The odds are balanced. A smart, tactical approach combining offense and defense is crucial for success."
     );
   }
-
   switch (encounter.event_type) {
     case "Dragon Fight":
       const tank = findBest("health");
